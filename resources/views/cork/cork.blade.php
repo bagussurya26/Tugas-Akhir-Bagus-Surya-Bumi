@@ -5,9 +5,9 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no">
-    <title>Sun Earth - @yield('title') </title>
+    <title>@yield('title')</title>
 
-    <link rel="icon" type="image/x-icon" href="{{ asset('assets/src/assets/img/favicon.ico') }}" />
+    <link rel="icon" type="image/x-icon" href="{{ asset('assets/src/assets/img/earth.png') }}" />
     <link href="{{ asset('assets/layouts/modern-light-menu/css/light/loader.css') }}" rel="stylesheet"
         type="text/css" />
     <link href="{{ asset('assets/layouts/modern-light-menu/css/dark/loader.css') }}" rel="stylesheet" type="text/css" />
@@ -22,81 +22,11 @@
     <link href="{{ asset('assets/layouts/modern-light-menu/css/dark/plugins.css') }}" rel="stylesheet"
         type="text/css" />
     <!-- END GLOBAL MANDATORY STYLES -->
-    
+
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
-    <!-- Dashboard -->
-    @yield('cssanalytics')
-    @yield('csssales')
+    @yield('css')
 
-    <!-- Master -->
-    @yield('cssdaftarkain')
-    @yield('cssdaftarproduk')
-    @yield('cssdaftarproduksi')
-    @yield('cssdaftarsupplier')
-
-    @yield('cssdetailkain')
-    @yield('cssdetailproduk')
-    @yield('cssdetailproduksi')
-    @yield('cssdetailsupplier')
-
-    @yield('cssinsertkain')
-    @yield('cssinsertproduk')
-    @yield('cssinsertproduksi')
-    @yield('cssinsertsupplier')
-
-    @yield('csseditkain')
-    @yield('csseditproduk')
-    @yield('csseditproduksi')
-    @yield('csseditsupplier')
-
-    @yield('cssdaftardeletedkain')
-    @yield('cssdaftardeletedproduk')
-    @yield('cssdaftardeletedproduksi')
-    @yield('cssdaftardeletedsupplier')
-
-    <!-- Transaksi -->
-    @yield('cssdaftarnotabeli')
-    @yield('cssinsertnotabeli')
-    @yield('csseditnotabeli')
-    @yield('cssdetailnotabeli')
-
-    @yield('cssdaftarnotajual')
-    @yield('cssinsertnotajual')
-    @yield('csseditnotajual')
-    @yield('cssdetailnotajual')
-   
-
-    <!-- Laporan -->
-    @yield('csslaporanstokkain')
-    @yield('csslaporanpembeliankain')
-    @yield('csslaporanproduksi')
-
-    <!-- HRD -->
-    @yield('cssdaftaruser')
-    @yield('cssdetailuser')
-    @yield('cssinsertuser')
-    @yield('cssedituser')
-
-    @yield('cssdaftarkaryawan')
-    @yield('cssinsertkaryawan')
-    @yield('csseditkaryawan')
-
-    
-
-    <!-- Peramalan -->
-    @yield('cssperamalanbulankhusus')
-    @yield('cssperamalanbulanan')
-    @yield('cssperamalantahunan')
-
-    <!-- Konfirmasi Aktivitas -->
-    @yield('csskonfirmasiaktivitas')
-
-    <!-- Log Aktivitas -->
-    @yield('csslogaktivitas')
-
-    <!-- Setting -->
-    @yield('csspengaturan')
 </head>
 
 <body class="layout-boxed">
@@ -122,7 +52,7 @@
                 </i>
             </a>
 
-            <div class="search-animated toggle-search">
+            {{-- <div class="search-animated toggle-search">
                 <i data-feather="search">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -137,11 +67,11 @@
                     </div>
                 </form>
                 <span class="badge badge-secondary">Ctrl + /</span>
-            </div>
+            </div> --}}
 
             <ul class="navbar-item flex-row ms-lg-auto ms-0">
 
-                <li class="nav-item dropdown language-dropdown">
+                {{-- <li class="nav-item dropdown language-dropdown">
                     <a href="javascript:void(0);" class="nav-link dropdown-toggle" id="language-dropdown"
                         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <img src="{{ asset('assets/src/assets/img/1x1/id.svg') }}" class="flag-width" alt="flag">
@@ -154,7 +84,7 @@
                                 src="{{ asset('assets/src/assets/img/1x1/us.svg') }}" class="flag-width" alt="flag">
                             <span class="align-self-center">&nbsp;English</span></a>
                     </div>
-                </li>
+                </li> --}}
 
                 <li class="nav-item theme-toggle-item">
                     <a href="javascript:void(0);" class="nav-link theme-toggle">
@@ -175,7 +105,7 @@
                     </a>
                 </li>
 
-                <li class="nav-item dropdown notification-dropdown">
+                {{-- <li class="nav-item dropdown notification-dropdown">
                     <a href="javascript:void(0);" class="nav-link dropdown-toggle" id="notificationDropdown"
                         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i data-feather="bell"></i>
@@ -203,11 +133,6 @@
 
                                         <div class="icon-status">
                                             <i data-feather="x"></i>
-                                            <line x1="18" y1="6" x2="6" y2="18">
-                                            </line>
-                                            <line x1="6" y1="6" x2="18" y2="18">
-                                            </line>
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -225,11 +150,6 @@
 
                                         <div class="icon-status">
                                             <i data-feather="x"></i>
-                                            <line x1="18" y1="6" x2="6" y2="18">
-                                            </line>
-                                            <line x1="6" y1="6" x2="18" y2="18">
-                                            </line>
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -247,11 +167,6 @@
 
                                         <div class="icon-status">
                                             <i data-feather="x"></i>
-                                            <line x1="18" y1="6" x2="6" y2="18">
-                                            </line>
-                                            <line x1="6" y1="6" x2="18" y2="18">
-                                            </line>
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -266,13 +181,6 @@
                             <div class="dropdown-item">
                                 <div class="media server-log">
                                     <i data-feather="server"></i>
-                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2">
-                                    </rect>
-                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2">
-                                    </rect>
-                                    <line x1="6" y1="6" x2="6" y2="6"></line>
-                                    <line x1="6" y1="18" x2="6" y2="18"></line>
-                                    </svg>
                                     <div class="media-body">
                                         <div class="data-info">
                                             <h6 class="">Server Rebooted</h6>
@@ -281,11 +189,6 @@
 
                                         <div class="icon-status">
                                             <i data-feather="x"></i>
-                                            <line x1="18" y1="6" x2="6" y2="18">
-                                            </line>
-                                            <line x1="6" y1="6" x2="18" y2="18">
-                                            </line>
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -294,12 +197,6 @@
                             <div class="dropdown-item">
                                 <div class="media file-upload">
                                     <i data-feather="file-text"></i>
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                    </svg>
                                     <div class="media-body">
                                         <div class="data-info">
                                             <h6 class="">Kelly Portfolio.pdf</h6>
@@ -308,11 +205,6 @@
 
                                         <div class="icon-status">
                                             <i data-feather="x"></i>
-                                            <line x1="18" y1="6" x2="6" y2="18">
-                                            </line>
-                                            <line x1="6" y1="6" x2="18" y2="18">
-                                            </line>
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -320,13 +212,7 @@
 
                             <div class="dropdown-item">
                                 <div class="media ">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" class="feather feather-heart">
-                                        <path
-                                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
-                                        </path>
-                                    </svg>
+                                    <i data-feather="heart"></i>                                
                                     <div class="media-body">
                                         <div class="data-info">
                                             <h6 class="">Licence Expiring Soon</h6>
@@ -334,15 +220,7 @@
                                         </div>
 
                                         <div class="icon-status">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round"
-                                                class="feather feather-x">
-                                                <line x1="18" y1="6" x2="6" y2="18">
-                                                </line>
-                                                <line x1="6" y1="6" x2="18" y2="18">
-                                                </line>
-                                            </svg>
+                                            <i data-feather="x"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -351,14 +229,14 @@
                         </div>
                     </div>
 
-                </li>
+                </li> --}}
 
                 <li class="nav-item dropdown user-profile-dropdown  order-lg-0 order-1">
                     <a href="javascript:void(0);" class="nav-link dropdown-toggle user" id="userProfileDropdown"
                         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <div class="avatar-container">
                             <div class="avatar avatar-sm avatar-indicators avatar-online">
-                                <img alt="avatar" src="{{ asset('assets/src/assets/img/profile-bumi.jpg') }}"
+                                <img alt="avatar" src="{{ asset('assets/src/assets/img/user.png') }}"
                                     class="rounded-circle">
                             </div>
                         </div>
@@ -371,47 +249,39 @@
                                     &#x1F44B;
                                 </div>
                                 <div class="media-body">
-                                    <h5>Bagus Surya Bumi</h5>
-                                    <p>Pemilik</p>
+                                    <h5>{{ auth()->user()->nama }}</h5>
+                                    <p>{{ auth()->user()->role }}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="dropdown-item">
-                            <a href="#">
+                        {{-- <div class="dropdown-item">
+                            <a href="{{ route('user.show', auth()->user()->id ) }}">
                                 <i data-feather="user"></i>
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                                </svg> <span>Profile</span>
+                                <span>Profile</span>
                             </a>
-                        </div>
-                        <div class="dropdown-item">
+                        </div> --}}
+                        {{-- <div class="dropdown-item">
                             <a href="#">
                                 <i data-feather="inbox"></i>
-                                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
-                                <path
-                                    d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z">
-                                </path>
-                                </svg> <span>Inbox</span>
+                                <span>Inbox</span>
                             </a>
                         </div>
                         <div class="dropdown-item">
                             <a href="#">
                                 <i data-feather="lock"></i>
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2">
-                                </rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                </svg> <span>Lock Screen</span>
+                                <span>Lock Screen</span>
                             </a>
-                        </div>
-                        <div class="dropdown-item">
-                            <a href="#">
-                                <i data-feather="log-out"></i>
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                                </svg> <span>Log Out</span>
-                            </a>
-                        </div>
+                        </div> --}}
+                        {{-- <form method="POST" action="{{ route('logout') }}">
+                            @csrf --}}
+                            <div class="dropdown-item">
+                                <a href="{{ route('logout') }}">
+                                    <i data-feather="log-out"></i>
+                                    <span>Log Out</span>
+                                </a>
+                            </div>
+                            {{--
+                        </form> --}}
                     </div>
 
                 </li>
@@ -435,13 +305,12 @@
                 <div class="navbar-nav theme-brand flex-row  text-center">
                     <div class="nav-logo">
                         <div class="nav-item theme-logo">
-                            <a href="{{ route('home') }}">
-                                <img src="{{ asset('assets/src/assets/img/logo3.svg') }}"
-                                    alt="logo">
+                            <a href="{{ route('dashboard') }}">
+                                <img src="{{ asset('assets/src/assets/img/earth.png') }}" alt="logo">
                             </a>
                         </div>
                         <div class="nav-item theme-text">
-                            <a href="{{ route('home') }}" class="nav-link">Sun Earth</a>
+                            <a href="{{ route('dashboard') }}" class="nav-link">SunEarth</a>
                         </div>
                     </div>
                     <div class="nav-item sidebar-toggle">
@@ -454,11 +323,11 @@
                 <div class="profile-info">
                     <div class="user-info">
                         <div class="profile-img">
-                            <img src="{{ asset('assets/src/assets/img/profile-bumi.jpg') }}" alt="avatar">
+                            <img src="{{ asset('assets/src/assets/img/user.png') }}" alt="avatar">
                         </div>
                         <div class="profile-content">
-                            <h6 class="">Bagus Surya Bumi</h6>
-                            <p class="">Pemilik</p>
+                            <h6 class="">{{ auth()->user()->nama }}</h6>
+                            <p class="">{{ auth()->user()->role }}</p>
                         </div>
                     </div>
                 </div>
@@ -467,7 +336,7 @@
 
                 <ul class="list-unstyled menu-categories" id="accordionExample">
 
-                    <li class="menu {{ request()->routeIs(['dashboard.*','home']) ? 'active' : '' }}">
+                    {{-- <li class="menu {{ request()->routeIs(['dashboard.*','home']) ? 'active' : '' }}">
                         <a href="#dashboard" data-bs-toggle="collapse"
                             aria-expanded="{{ request()->routeIs(['dashboard.*','home']) ? 'true' : 'false' }}"
                             class="dropdown-toggle">
@@ -490,10 +359,22 @@
                                 <a href="{{ route('dashboard.sales') }}"> Sales </a>
                             </li>
                         </ul>
+                    </li> --}}
+
+                    <li class="menu {{ request()->routeIs(['dashboard']) ? 'active' : '' }}">
+                        <a href="{{ route('dashboard') }}" aria-expanded="false" class="dropdown-toggle">
+                            <div class="">
+                                <i data-feather="home"></i>
+                                <span>Dashboard</span>
+                            </div>
+                        </a>
                     </li>
 
-                    <li class="menu {{ request()->routeIs(['kain.*', 'produk.*', 'produksi.*', 'supplier.*']) ? 'active' : '' }}">
-                        <a href="#master" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs(['kain.*', 'produk.*', 'produksi.*', 'supplier.*']) ? 'true' : 'false' }}" class="dropdown-toggle">
+                    <li
+                        class="menu {{ request()->routeIs(['kain.*', 'produk.*', 'supplier.*', 'kategoriproduk.*', 'kategorikain.*', 'rak.*', 'musim.*', 'ukuran.*']) ? 'active' : '' }}">
+                        <a href="#master" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['kain.*', 'produk.*', 'supplier.*', 'kategoriproduk.*', 'kategorikain.*', 'rak.*', 'musim.*', 'ukuran.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
                             <div class="">
                                 <i data-feather="grid"></i>
                                 <span>Master</span>
@@ -504,24 +385,66 @@
                                 </svg>
                             </div>
                         </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['kain.*', 'produk.*', 'produksi.*', 'supplier.*']) ? 'show' : '' }}" id="master" data-bs-parent="#accordionExample">
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['kain.*', 'produk.*', 'supplier.*', 'kategoriproduk.*', 'kategorikain.*', 'rak.*', 'musim.*', 'ukuran.*']) ? 'show' : '' }}"
+                            id="master" data-bs-parent="#accordionExample">
                             <li class="{{ request()->routeIs('kain.*') ? 'active' : '' }}">
                                 <a href="{{ route('kain.index') }}"> Kain </a>
                             </li>
                             <li class="{{ request()->routeIs('produk.*') ? 'active' : '' }}">
                                 <a href="{{ route('produk.index') }}"> Produk </a>
                             </li>
-                            <li class="{{ request()->routeIs('produksi.*') ? 'active' : '' }}">
-                                <a href="{{ route('produksi.index') }}"> Produksi </a>
-                            </li>
+                            @auth
+                            @if(auth()->user()->hasRole('Pemilik'))
                             <li class="{{ request()->routeIs('supplier.*') ? 'active' : '' }}">
                                 <a href="{{ route('supplier.index') }}"> Supplier </a>
+                            </li>
+                            @endif
+                            @endauth
+                            <li class="{{ request()->routeIs('rak.*') ? 'active' : '' }}">
+                                <a href="{{ route('rak.index') }}"> Rak </a>
+                            </li>
+                            <li class="{{ request()->routeIs('ukuran.*') ? 'active' : '' }}">
+                                <a href="{{ route('ukuran.index') }}"> Ukuran </a>
+                            </li>
+                            <li class="{{ request()->routeIs('kategorikain.*') ? 'active' : '' }}">
+                                <a href="{{ route('kategorikain.index') }}"> Kategori Kain </a>
+                            </li>
+                            <li class="{{ request()->routeIs('kategoriproduk.*') ? 'active' : '' }}">
+                                <a href="{{ route('kategoriproduk.index') }}"> Kategori Produk </a>
+                            </li>
+                            <li class="{{ request()->routeIs('musim.*') ? 'active' : '' }}">
+                                <a href="{{ route('musim.index') }}"> Musim </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li
+                        class="menu {{ request()->routeIs(['produksi.*']) ? 'active' : '' }}">
+                        <a href="#produksi" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['produksi.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
+                            <div class="">
+                                <i data-feather="target"></i>
+                                <span>Produksi</span>
+                            </div>
+                            <div>
+                                <i data-feather="chevron-right"></i>
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </div>
+                        </a>
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['produksi.*']) ? 'show' : '' }}"
+                            id="produksi" data-bs-parent="#accordionExample">
+                            <li class="{{ request()->routeIs('produksi.*') ? 'active' : '' }}">
+                                <a href="{{ route('produksi.index') }}"> Produksi </a>
                             </li>
                         </ul>
                     </li>
 
                     <li class="menu {{ request()->routeIs(['notabeli.*', 'notajual.*']) ? 'active' : '' }}">
-                        <a href="#transaksi" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs(['notabeli.*', 'notajual.*']) ? 'true' : 'false' }}" class="dropdown-toggle">
+                        <a href="#transaksi" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['notabeli.*', 'notajual.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
                             <div class="">
                                 <i data-feather="shopping-bag"></i>
                                 <span>Transaksi</span>
@@ -532,10 +455,15 @@
                                 </svg>
                             </div>
                         </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['notabeli.*', 'notajual.*']) ? 'show' : '' }}" id="transaksi" data-bs-parent="#accordionExample">
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['notabeli.*', 'notajual.*']) ? 'show' : '' }}"
+                            id="transaksi" data-bs-parent="#accordionExample">
+                            @auth
+                            @if(auth()->user()->hasRole('Pemilik'))
                             <li class="{{ request()->routeIs(['notabeli*']) ? 'active' : '' }}">
                                 <a href="{{ route('notabeli.index') }}"> Pembelian </a>
                             </li>
+                            @endif
+                            @endauth
                             <li class="{{ request()->routeIs(['notajual*']) ? 'active' : '' }}">
                                 <a href="{{ route('notajual.index') }}"> Penjualan </a>
                             </li>
@@ -543,7 +471,9 @@
                     </li>
 
                     <li class="menu {{ request()->routeIs(['laporan.*']) ? 'active' : '' }}">
-                        <a href="#laporan" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs(['laporan.*']) ? 'true' : 'false' }}" class="dropdown-toggle">
+                        <a href="#laporan" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['laporan.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
                             <div class="">
                                 <i data-feather="file-text"></i>
                                 <span>Laporan</span>
@@ -554,21 +484,31 @@
                                 </svg>
                             </div>
                         </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['laporan.*']) ? 'show' : '' }}" id="laporan" data-bs-parent="#accordionExample">
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['laporan.*']) ? 'show' : '' }}"
+                            id="laporan" data-bs-parent="#accordionExample">
                             <li class="{{ request()->routeIs(['laporan.stokkain*']) ? 'active' : '' }}">
                                 <a href="{{ route('laporan.stokkain') }}"> Stok Kain </a>
                             </li>
+                            @auth
+                            @if(auth()->user()->hasRole('Pemilik'))
                             <li class="{{ request()->routeIs(['laporan.pembeliankain*']) ? 'active' : '' }}">
                                 <a href="{{ route('laporan.pembeliankain') }}"> Pembelian Kain </a>
                             </li>
+                            @endif
+                            @endauth
                             <li class="{{ request()->routeIs(['laporan.produksi*']) ? 'active' : '' }}">
                                 <a href="{{ route('laporan.produksi') }}"> Produksi </a>
+                            </li>
+                            <li class="{{ request()->routeIs(['laporan.penggunaankain*']) ? 'active' : '' }}">
+                                <a href="{{ route('laporan.penggunaankain') }}">Penggunaan Kain</a>
                             </li>
                         </ul>
                     </li>
 
-                    <li class="menu {{ request()->routeIs(['karyawan.*']) ? 'active' : '' }}">
-                        <a href="#hrd" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs(['karyawan.*']) ? 'true' : 'false' }}" class="dropdown-toggle">
+                    <li class="menu {{ request()->routeIs(['karyawan.*', 'user.*']) ? 'active' : '' }}">
+                        <a href="#hrd" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['karyawan.*', 'user.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
                             <div class="">
                                 <i data-feather="users"></i>
                                 <span>HRD</span>
@@ -579,13 +519,15 @@
                                 </svg>
                             </div>
                         </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['karyawan.*']) ? 'show' : '' }}" id="hrd" data-bs-parent="#accordionExample">
-                            {{-- <li class="{{ request()->routeIs(['hrd.daftaruser*']) ? 'active' : '' }}">
-                                <a href="{{ route('hrd.daftaruser') }}"> Users </a>
-                            </li> --}}
-                            <li>
-                                <a href="#"> Register </a>
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['karyawan.*', 'user.*']) ? 'show' : '' }}"
+                            id="hrd" data-bs-parent="#accordionExample">
+                            @auth
+                            @if(auth()->user()->hasRole('Pemilik'))
+                            <li class="{{ request()->routeIs(['user.*']) ? 'active' : '' }}">
+                                <a href="{{ route('user.index') }}"> Users </a>
                             </li>
+                            @endif
+                            @endauth
                             <li class="{{ request()->routeIs(['karyawan.*']) ? 'active' : '' }}">
                                 <a href="{{ route('karyawan.index') }}"> Karyawan </a>
                             </li>
@@ -593,7 +535,9 @@
                     </li>
 
                     <li class="menu {{ request()->routeIs(['peramalan.*']) ? 'active' : '' }}">
-                        <a href="#peramalan" data-bs-toggle="collapse" aria-expanded="{{ request()->routeIs(['peramalan.*']) ? 'true' : 'false' }}" class="dropdown-toggle">
+                        <a href="#peramalan" data-bs-toggle="collapse"
+                            aria-expanded="{{ request()->routeIs(['peramalan.*']) ? 'true' : 'false' }}"
+                            class="dropdown-toggle">
                             <div class="">
                                 <i data-feather="trending-up"></i>
                                 <span>Peramalan</span>
@@ -604,7 +548,11 @@
                                 </svg>
                             </div>
                         </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['peramalan.*']) ? 'show' : '' }}" id="peramalan" data-bs-parent="#accordionExample">
+                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['peramalan.*']) ? 'show' : '' }}"
+                            id="peramalan" data-bs-parent="#accordionExample">
+                            <li class="{{ request()->routeIs(['peramalan.musiman*']) ? 'active' : '' }}">
+                                <a href="{{ route('peramalan.musiman') }}"> Musiman </a>
+                            </li>
                             <li class="{{ request()->routeIs(['peramalan.bulankhusus*']) ? 'active' : '' }}">
                                 <a href="{{ route('peramalan.bulankhusus') }}"> Bulan Khusus </a>
                             </li>
@@ -617,16 +565,17 @@
                         </ul>
                     </li>
 
-                    <li class="menu {{ request()->routeIs(['konfirmasiaktivitas.*']) ? 'active' : '' }}">
-                        <a href="{{ route('konfirmasiaktivitas.index') }}" aria-expanded="false"
-                            class="dropdown-toggle">
+                    {{-- <li class="menu {{ request()->routeIs(['estimasi.*']) ? 'active' : '' }}">
+                        <a href="{{ route('estimasi.index') }}" aria-expanded="false" class="dropdown-toggle">
                             <div class="">
-                                <i data-feather="check-square"></i>
-                                <span>Konfirmasi Aktivitas</span>
+                                <i data-feather="shield"></i>
+                                <span>Estimasi Kain</span>
                             </div>
                         </a>
-                    </li>
+                    </li> --}}
 
+                    {{-- @auth
+                    @if(auth()->user()->hasRole('Pemilik'))
                     <li class="menu {{ request()->routeIs(['logaktivitas.*']) ? 'active' : '' }}">
                         <a href="{{ route('logaktivitas.index') }}" aria-expanded="false" class="dropdown-toggle">
                             <div class="">
@@ -635,15 +584,9 @@
                             </div>
                         </a>
                     </li>
-
-                    {{-- <li class="menu">
-                        <a href="#" aria-expanded="false" class="dropdown-toggle">
-                            <div class="">
-                                <i data-feather="settings"></i>
-                                <span>Pengaturan</span>
-                            </div>
-                        </a>
-                    </li> --}}
+                    @endif
+                    @endauth --}}
+                
 
                 </ul>
 
@@ -657,76 +600,9 @@
             <div class="layout-px-spacing">
 
                 <div class="middle-content container-xxl p-0">
-                    
 
-                    <!-- Dashboard -->
-                    @yield('kontenanalytics')
-                    @yield('kontensales')
+                    @yield('konten')
 
-                    <!-- Master -->
-                    @yield('kontendaftarkain')
-                    @yield('kontendaftarproduk')
-                    @yield('kontendaftarproduksi')
-                    @yield('kontendaftarsupplier')
-
-                    @yield('kontendetailkain')
-                    @yield('kontendetailproduk')
-                    @yield('kontendetailproduksi')
-                    @yield('kontendetailsupplier')
-
-                    @yield('konteninsertkain')
-                    @yield('konteninsertproduk')
-                    @yield('konteninsertproduksi')
-                    @yield('konteninsertsupplier')
-
-                    @yield('konteneditkain')
-                    @yield('konteneditproduk')
-                    @yield('konteneditproduksi')
-                    @yield('konteneditsupplier')
-
-                    @yield('kontendaftardeletedkain')
-                    @yield('kontendaftardeletedproduk')
-                    @yield('kontendaftardeletedproduksi')
-                    @yield('kontendaftardeletedsupplier')
-
-                    <!-- Transaksi -->
-                    @yield('kontendaftarnotabeli')
-                    @yield('konteninsertnotabeli')
-                    @yield('konteneditnotabeli')
-                    @yield('kontendetailnotabeli')
-                    
-                    @yield('kontendaftarnotajual')
-                    @yield('konteninsertnotajual')
-                    @yield('konteneditnotajual')
-                    @yield('kontendetailnotajual')
-
-                    <!-- Laporan -->
-                    @yield('kontenlaporanstokkain')
-                    @yield('kontenlaporanpembeliankain')
-                    @yield('kontenlaporanproduksi')
-
-                    <!-- HRD -->
-                    @yield('kontendaftaruser')
-                    @yield('kontendetailuser')
-                    @yield('kontensettinguser')
-
-                    @yield('kontendaftarkaryawan')
-                    @yield('konteninsertkaryawan')
-                    @yield('konteneditkaryawan')
-
-                    <!-- Peramalan -->
-                    @yield('kontenperamalanbulankhusus')
-                    @yield('kontenperamalanbulanan')
-                    @yield('kontenperamalantahunan')
-
-                    <!-- Konfirmasi Aktivitas -->
-                    @yield('kontenkonfirmasiaktivitas')
-
-                    <!-- Log Aktivitas -->
-                    @yield('kontenlogaktivitas')
-
-                    <!-- Setting -->
-                    @yield('kontenpengaturan')
                 </div>
 
             </div>
@@ -734,7 +610,7 @@
             <div class="footer-wrapper">
                 <div class="footer-section f-section-1">
                     <p class="">Copyright © <span class="dynamic-year">2023</span> <a target="_blank"
-                            href="https://designreset.com/cork-admin/">Sun Earth</a>, All rights reserved.</p>
+                            href="https://designreset.com/cork-admin/">CV Adonai Suritama</a>, All rights reserved.</p>
                 </div>
                 <div class="footer-section f-section-2">
                     <p class="">Coded by Datesunearth
@@ -759,76 +635,8 @@
     </script>
     <!-- END GLOBAL MANDATORY SCRIPTS -->
 
-    <!-- Dashboard -->
-    @yield('jsanalytics')
-    @yield('jssales')
+    @yield('js')
 
-    <!-- Master -->
-    @yield('jsdaftarkain')
-    @yield('jsdaftarproduk')
-    @yield('jsdaftarproduksi')
-    @yield('jsdaftarsupplier')
-
-    @yield('jsdetailkain')
-    @yield('jsdetailproduk')
-    @yield('jsdetailproduksi')
-    @yield('jsdetailsupplier')
-
-    @yield('jsinsertkain')
-    @yield('jsinsertproduk')
-    @yield('jsinsertproduksi')
-    @yield('jsinsertsupplier')
-
-    @yield('jseditkain')
-    @yield('jseditproduk')
-    @yield('jseditproduksi')
-    @yield('jseditsupplier')
-
-    @yield('jsdaftardeletedkain')
-    @yield('jsdaftardeletedproduk')
-    @yield('jsdaftardeletedproduksi')
-    @yield('jsdaftardeletedsupplier')
-
-    <!-- Transaksi -->
-    @yield('jsdaftarnotabeli')
-    @yield('jsinsertnotabeli')
-    @yield('jseditnotabeli')
-    @yield('jsdetailnotabeli')
-    @yield('jsdaftardeletedbuyorder')
-
-    @yield('jsdaftarnotajual')
-    @yield('jsinsertnotajual')
-    @yield('jseditnotajual')
-    @yield('jsdetailnotajual')
-
-    <!-- Laporan -->
-    @yield('jslaporanstokkain')
-    @yield('jslaporanpembeliankain')
-    @yield('jslaporanproduksi')
-
-    <!-- HRD -->
-    @yield('jsdaftaruser')
-    @yield('jsdetailuser')
-    @yield('jssettinguser')
-
-    @yield('jsdaftarkaryawan')
-    @yield('jsinsertkaryawan')
-    @yield('jseditkaryawan')
-    
-
-    <!-- Peramalan -->
-    @yield('jsperamalanbulankhusus')
-    @yield('jsperamalanbulanan')
-    @yield('jsperamalantahunan')
-
-    <!-- Konfirmasi Aktivitas -->
-    @yield('jskonfirmasiaktivitas')
-
-    <!-- Log Aktivitas -->
-    @yield('jslogaktivitas')
-
-    <!-- Setting -->
-    @yield('jspengaturan')
 
 </body>
 

@@ -2,23 +2,13 @@
 
 @section('title', 'Tambah Data Karyawan')
 
-@section('cssinsertkaryawan')
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/tagify/tagify.css') }}">
-
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/assets/css/light/forms/switches.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/light/editors/quill/quill.snow.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/light/tagify/custom-tagify.css') }}">
-
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/assets/css/dark/forms/switches.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/editors/quill/quill.snow.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/tagify/custom-tagify.css') }}">
-
+@section('css')
 <link rel="stylesheet" href="{{ asset('assets/src/assets/css/light/apps/ecommerce-create.css') }}">
 <link rel="stylesheet" href="{{ asset('assets/src/assets/css/dark/apps/ecommerce-create.css') }}">
 
 @endsection
 
-@section('konteninsertkaryawan')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
@@ -32,28 +22,22 @@
 </div>
 <!-- /BREADCRUMB -->
 
-{{-- @if (session()->has('success'))
-<div class="alert alert-success" role="alert">
-    {{ session('success') }}
-</div>
-@endif --}}
-
 <div class="row mb-4 layout-spacing">
 
     <form enctype="multipart/form-data" class="row g-3" method="POST" action="{{ route('karyawan.store') }}">
         @csrf
 
-        <div class="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
+        <div class="col-lg-12">
 
             <div class="widget-content widget-content-area ecommerce-create-section">
 
                 <div class="row mb-4">
                     <div class="col-7">
-                        <label>Nama Karyawan</label>
+                        <label>Nama Karyawan <small class="text-muted ms-2 pb-1">(Required)</small></label>
                         <div class="col-sm-12">
                             <input type="text" value="{{ old('nama') }}"
                                 class="form-control @error('nama') is-invalid @enderror" name="nama"
-                                placeholder="Nama Karyawan" autofocus>
+                                placeholder="Masukkan nama..." autofocus required>
                             @error('nama')
                             <div class="invalid-feedback">
                                 {{ $message }}
@@ -62,43 +46,32 @@
                         </div>
                     </div>
                     <div class="col">
-                        <label>Nomor Handphone</label>
+                        <label>Nomor Handphone <small class="text-muted ms-2 pb-1">(Required)</small></label>
                         <div class="col-sm-12">
                             <input type="text" value="{{ old('no_hp') }}"
-                                class="form-control"
-                                name="no_hp" placeholder="Nomor Handphone">
+                                class="form-control @error('no_hp') is-invalid @enderror" name="no_hp"
+                                placeholder="Masukkan No. Hp.." required>
+                            @error('no_hp')
+                            <div class="invalid-feedback">
+                                {{ $message }}
+                            </div>
+                            @enderror
                         </div>
                     </div>
+                </div>
+
+                <div class="col text-end">
+                    <button class="btn btn-success" type="submit">Submit</button>
                 </div>
             </div>
 
         </div>
 
-        <div class="col-xxl-3 col-xl-12 col-lg-12 col-md-12 col-sm-12">
-
-            <div class="row">
-                <div class="col-xxl-12 col-xl-8 col-lg-8 col-md-7 mt-xxl-0 mt-4">
-                    <div class="widget-content widget-content-area ecommerce-create-section">
-                        <div class="row mb-4">
-                            <div class="col-sm-12">
-                                <button class="btn btn-danger w-100">Reset</button>
-                            </div>
-                        </div>
-                        <div class="row mb-4">
-                            <div class="col-sm-12">
-                                <button class="btn btn-success w-100" type="submit">Submit</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </form>
 
 </div>
 @endsection
 
-@section('jsinsertkaryawan')
+@section('js')
 <script src="{{ asset('assets/src/assets/js/forms/bootstrap_validation/bs_validation_script.js') }}"></script>
-
 @endsection

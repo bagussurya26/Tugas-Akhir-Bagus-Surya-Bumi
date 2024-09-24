@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class JualDetail extends Model
+class JualDetail extends Pivot
 {
     use HasFactory;
 
@@ -14,19 +17,11 @@ class JualDetail extends Model
     protected $table = 'nota_jual_details';
 
     protected $fillable = [
-        'nota_juals_id',
-        'ukuran_pakaians_pakaians_id',
-        'ukuran_pakaians_ukurans_id',
-        'qty_pakaian',
+        'nota_jual_id',
+        'produk_ukuran_id',
+        'qty_produk',
+        'harga',
+        'subtotal',
     ];
 
-    public function notajuals()
-    {
-        return $this->belongsTo(NotaJual::class);
-    }
-
-    public function ukuranpakaians()
-    {
-        return $this->belongsTo(UkuranPakaian::class);
-    }
 }

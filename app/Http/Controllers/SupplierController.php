@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\User;
 use App\Models\NotaBeli;
 use App\Models\Supplier;
-use App\Models\BeliDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,13 +13,13 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        $queryModel = Supplier::orderBy('id', 'asc')->get();
+        $suppliers = Supplier::all();
 
         $title = 'Delete Data!';
         $text = "Are you sure you want to delete?";
         confirmDelete($title, $text);
 
-        return view('master.supplier.daftarsupplier', compact('queryModel'));
+        return view('master.supplier.daftarsupplier', compact('suppliers'));
     }
 
     public function create()
@@ -30,89 +30,102 @@ class SupplierController extends Controller
 
     public function store(Request $request)
     {
+
+        DB::beginTransaction();
+
         $validatedData = $request->validate([
-            'nama' => 'required|unique:suppliers,nama',
+            'nama' => 'required',
             'no_hp' => 'required',
-            'alamat' => '',
-            'email' => '',
-            'no_rek' => '',
-            'keterangan' => '',
         ], [
             'nama.required' => 'Wajib diisi!',
-            'nama.unique' => 'Nama Sudah Ada!',
             'no_hp.required' => 'Wajib diisi!',
         ]);
 
-        Supplier::create($validatedData);
+        try {
 
-        toast('Penambahan data berhasil!', 'success');
-        return redirect()->route('supplier.create');
+            Supplier::create([
+                'nama' => $validatedData['nama'],
+                'no_hp' => $validatedData['no_hp'],
+                'alamat' => $request->input('alamat'),
+                'email' => $request->input('email'),
+                'keterangan' => $request->input('keterangan'),
+                'created_by' => auth()->user()->id,
+                'updated_by' => auth()->user()->id,
+            ]);
+
+            DB::commit();
+
+            toast('Penambahan data berhasil!', 'success');
+            return redirect()->route('supplier.create');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            echo ($e);
+
+            toast('Penambahan data gagal!', 'warning');
+            // return redirect()->route('supplier.create')->withInput();
+        }
     }
 
     public function show($id)
     {
-        $detailSupplier = Supplier::where('suppliers.id', $id)
+        $suppliers = Supplier::find($id);
+
+        $riwayatPemesanan = NotaBeli::join('nota_beli_details', 'nota_beli_details.nota_beli_id', '=', 'nota_belis.id')
+            ->where('nota_belis.supplier_id', $id)
+            ->groupBy('nota_belis.id')
+            ->orderBy('nota_belis.tgl_pesan', 'desc')
+            ->limit(5)
             ->get();
 
-        $riwayatPemesanan = BeliDetail::join('nota_belis', 'nota_beli_details.nota_belis_id', '=', 'nota_belis.id')
-            ->join('suppliers', 'nota_belis.suppliers_id', '=', 'suppliers.id')
-            ->select('nota_beli_details.*', 'nota_belis.*', 'suppliers.nama')
-            ->where('suppliers.id', $id)
-            ->get();
-
-        // dd($detailKain);
-
-        return view('master.supplier.detailsupplier', compact('detailSupplier', 'riwayatPemesanan'));
+        return view('master.supplier.detailsupplier', compact('suppliers', 'riwayatPemesanan'));
     }
 
     public function edit($id)
     {
-        $detailSupplier = Supplier::where('suppliers.id', $id)
-            ->get();
+        $suppliers = Supplier::find($id);
 
-        return view('master.supplier.editsupplier', compact('detailSupplier'));
+        return view('master.supplier.editsupplier', compact('suppliers'));
     }
 
     public function update(Request $request, $id)
     {
-        $cekNamaSupplier = Supplier::where('id', $id)
-            ->value('nama');
+        DB::beginTransaction();
 
-        $supplier = Supplier::find($id);
+        $validatedData = $request->validate([
+            'nama' => 'required',
+            'no_hp' => 'required',
+        ], [
+            'nama.required' => 'Wajib diisi!',
+            'no_hp.required' => 'Wajib diisi!',
+            'email.required' => 'Wajib diisi!',
+        ]);
 
-        if ($cekNamaSupplier == $request->input('nama')) {
-            $validatedData = $request->validate([
-                'nama' => 'required',
-                'no_hp' => 'required',
-                'alamat' => '',
-                'email' => '',
-                'no_rek' => '',
-                'keterangan' => '',
-            ], [
-                'nama.required' => 'Wajib diisi!',
-                'no_hp.required' => 'Wajib diisi!',
-            ]);
+        try {
 
-            $supplier->update($validatedData);
-        } else {
-            $validatedData = $request->validate([
-                'nama' => 'required|unique:suppliers,nama',
-                'no_hp' => 'required',
-                'alamat' => '',
-                'email' => '',
-                'no_rek' => '',
-                'keterangan' => '',
-            ], [
-                'nama.required' => 'Wajib diisi!',
-                'nama.unique' => 'Nama Sudah Ada!',
-                'no_hp.required' => 'Wajib diisi!',
-            ]);
+            Supplier::find($id)
+                ->update([
+                    'nama' => $validatedData['nama'],
+                    'no_hp' => $validatedData['no_hp'],
+                    'alamat' => $request->input('alamat'),
+                    'email' => $request->input('email'),
+                    'keterangan' => $request->input('keterangan'),
+                    'updated_by' => auth()->user()->id,
+                ]);
 
-            $supplier->update($validatedData);
+            DB::commit();
+
+            toast('Pengubahan data berhasil!', 'success');
+            return redirect()->route('supplier.show', $id);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            echo ($e);
+
+            toast('Pengubahan data gagal!', 'warning');
+            // return redirect()->route('supplier.edit', $id);
         }
-
-        toast('Perubahan data berhasil!', 'success');
-        return redirect()->route('supplier.index');
     }
 
     public function destroy($id)
@@ -121,15 +134,12 @@ class SupplierController extends Controller
 
         try {
 
-            $cekKaryawanNotaBeli = NotaBeli::where('suppliers_id', $id)
+            $cekSupplierNotaBeli = NotaBeli::where('supplier_id', $id)
                 ->first();
 
-            if ($cekKaryawanNotaBeli == null) {
+            if ($cekSupplierNotaBeli == null) {
 
-                DB::statement('SET foreign_key_checks = 0');
-                $supplier = Supplier::find($id);
-                $supplier->delete();
-                DB::statement('SET foreign_key_checks = 1');
+                Supplier::find($id)->delete();
 
                 DB::commit();
 
@@ -143,9 +153,9 @@ class SupplierController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
 
-            // echo ($e);
+            echo ($e);
             alert()->error('Yahhh..', 'Menghapus data tidak berhasil!');
-            return redirect()->route('supplier.index');
+            // return redirect()->route('supplier.index');
         }
     }
 }

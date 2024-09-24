@@ -2,7 +2,7 @@
 
 @section('title', 'Laporan Stok Kain')
 
-@section('csslaporanstokkain')
+@section('css')
 <!-- BEGIN PAGE LEVEL STYLES -->
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
@@ -18,7 +18,7 @@
 <!-- END PAGE LEVEL STYLES -->
 @endsection
 
-@section('kontenlaporanstokkain')
+@section('konten')
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
@@ -30,7 +30,7 @@
 </div>
 <!-- /BREADCRUMB -->
 
-<div class="row">
+<div class="row layout-spacing page-meta">
 
     <div class="col-xl-12 col-lg-12 col-sm-12  layout-spacing">
         <div class="statbox widget box box-shadow">
@@ -55,17 +55,19 @@
                         <tr>
                             <th>Kode</th>
                             <th>Jenis Kain</th>
+                            <th>Kategori</th>
                             <th>Warna</th>
-                            <th class="text-center">Stok</th>
+                            <th class="text-center">Stok (Meter)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datalaporanstok)
+                        @foreach ($kains as $kain)
                         <tr>
-                            <td>{{ $datalaporanstok->id }}</td>
-                            <td>{{ $datalaporanstok->jenis_kain }}</td>
-                            <td>{{ $datalaporanstok->warna }}</td>
-                            <td class="text-center">{{ $datalaporanstok->stok }}</td>
+                            <td>{{ $kain->kode_kain }}</td>
+                            <td>{{ $kain->nama }}</td>
+                            <td>{{ $kain->kategori_kains->nama }}</td>
+                            <td>{{ $kain->warna }}</td>
+                            <td class="text-center">{{ $kain->stok }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -77,7 +79,7 @@
 </div>
 @endsection
 
-@section('jslaporanstokkain')
+@section('js')
 <!-- BEGIN PAGE LEVEL SCRIPTS -->
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>

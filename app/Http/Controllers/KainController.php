@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ListKain;
 use App\Models\Rak;
 use App\Models\Kain;
+use App\Models\User;
 use App\Models\Produksi;
 use App\Models\BeliDetail;
-use App\Models\KategoriKain;
 use App\Models\RincianKain;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
+use App\Models\KategoriKain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Requests\KainCreateRequest;
+use Illuminate\Support\Facades\File;
 
 
 class KainController extends Controller
@@ -18,26 +22,13 @@ class KainController extends Controller
 
     public function index()
     {
-        $queryModel = Kain::join('raks', 'kains.raks_id', '=', 'raks.id')
-            ->select('kains.*', 'raks.lokasi')
-            ->orderBy('kains.created_at', 'desc')
-            ->get();
+        $kains = Kain::all();
 
         $title = 'Delete Data!';
         $text = "Are you sure you want to delete?";
         confirmDelete($title, $text);
 
-
-        return view('master.kain.daftarkain', compact('queryModel'));
-    }
-
-    public function laporanstok()
-    {
-        $queryModel = Kain::orderBy('created_at', 'desc')
-            ->get();
-        // dd($queryModel);
-
-        return view('laporan.stokkain', compact('queryModel'));
+        return view('master.kain.daftarkain', compact('kains'));
     }
 
     public function create()
@@ -49,124 +40,165 @@ class KainController extends Controller
         return view('master.kain.insertkain', compact('raks', 'kategoris'));
     }
 
-    public function store(KainCreateRequest $request)
+    public function store(Request $request)
     {
-        // return $request->file('input-foto')->store('post-images');
-
         DB::beginTransaction();
 
+        $validatedData = $request->validate([
+            'kode_kain' => 'required',
+            'kategori_kain_id' => 'required',
+            'rak_id' => 'required',
+            'nama' => 'required',
+            'warna' => 'required',
+            'lebar' => 'required',
+            'foto' => 'image|mimes:png,jpg,jpeg',
+        ], [
+            'kode_kain.required' => 'Wajib diisi',
+            'kategori_kain_id.required' => 'Wajib diisi!',
+            'rak_id.required' => 'Wajib diisi!',
+            'nama.required' => 'Wajib diisi!',
+            'warna.required' => 'Wajib diisi!',
+            'lebar.required' => 'Wajib diisi!',
+            'foto.image' => 'Hanya menerima file berupa gambar!',
+            'foto.mimes' => 'Tipe file gambar yang diijinkan: .jpg, .png, .jpeg!'
+        ]);
+
         try {
-            $cekKain = Kain::where('kode_kain', $request->input('kode_kain'))
-                ->where('warna', $request->input('warna'))
-                ->first();
+            $kain = Kain::create([
+                'kode_kain' => $validatedData['kode_kain'],
+                'kategori_kain_id' => $validatedData['kategori_kain_id'],
+                'rak_id' => $validatedData['rak_id'],
+                'nama' => $validatedData['nama'],
+                'warna' => $validatedData['warna'],
+                'lebar' => $validatedData['lebar'],
+                'keterangan' => $request->input('keterangan'),
+                'created_by' => auth()->user()->id,
+                'updated_by' => auth()->user()->id,
+            ]);
 
-            if ($cekKain == null) {
-                $kain = Kain::create($request->all());
-
+            if ($request->hasFile('foto')) {
                 $image = $request->file('foto');
+                $randomName = Str::random(10);
+                $kodeKain = $validatedData['kode_kain'];
+                $extension = $image->getClientOriginalExtension();
+                $imageName = $randomName . '_' . $kodeKain . '.' . $extension;
+                $image->move(public_path('uploads/kains/'), $imageName);
 
-                // dd($image);
-                // $name = $image->getClientOriginalName();
-                // $destinationPath = public_path('/uploads/kain');
-                // $id = $kain->id;
-                // $newFileName = $id . '.' . $image->getClientOriginalExtension();
-                // $image->move($destinationPath, $newFileName);
-
-                
-                // Save the file path to the database
-                // $file = new Kain();
-                // $file->foto = 'uploads/kain/' . $name;
-                // $file->save();
-
-                // Kain::where('id', $id)
-                //     ->update([
-                //         'foto' => $newFileName,
-                //     ]);
-
-                DB::commit();
-
-                toast('Penambahan data berhasil!', 'success');
-                return redirect()->route('kain.create');
+                Kain::where('id', $kain->id)
+                    ->firstOrFail()
+                    ->update([
+                        'foto' => $imageName,
+                    ]);               
             }
-            else{
-                alert()->error('Gagal!', 'Kode Kain dan Warna Kain sudah tersedia!');
-                DB::commit();
-                return redirect()->route('kain.create');
-            }
+
+            DB::commit();
+
+            toast('Penambahan data berhasil!', 'success');
+            return redirect()->route('kain.index');
 
         } catch (\Exception $e) {
             DB::rollback();
-
             // echo ($e);
 
             toast('Penambahan data gagal!', 'warning');
-            return redirect()->route('kain.create');
+            return redirect()->route('kain.index')->withInput();
         }
-
-
-        // if ($request->hasFile('input-foto')) {
-
-        //     $validatedData['input-foto'] = $request->file('input-foto')->store('post-images');
-
-        //     $file = $request->file('input-foto');
-        //     $kode = $request->input("input-kode");
-        //     $filename = $kode . '.' . $file->extension();
-        //     $folder = uniqid() . '-' . date("Ymd");
-        //     $file->storeAs('baba/' . $folder, $filename);
-
-        // }     
     }
 
     public function show($id)
     {
-        $detailKain = Kain::join('raks', 'kains.raks_id', '=', 'raks.id')
-            ->select('kains.*', 'raks.lokasi')
-            ->where('kains.id', $id)
-            ->get();
+        $kains = Kain::find($id);
 
-        $riwayatPemesanan = BeliDetail::join('nota_belis', 'nota_beli_details.nota_belis_id', '=', 'nota_belis.id')
-            ->join('suppliers', 'nota_belis.suppliers_id', '=', 'suppliers.id')
+        $riwayatPembelian = BeliDetail::join('nota_belis', 'nota_beli_details.nota_beli_id', '=', 'nota_belis.id')
+            ->join('suppliers', 'nota_belis.supplier_id', '=', 'suppliers.id')
             ->select('nota_beli_details.*', 'nota_belis.*', 'suppliers.nama')
-            ->where('nota_beli_details.kains_id', $id)
+            ->where('nota_beli_details.kain_id', $id)
+            ->orderBy('nota_belis.tgl_pesan', 'desc')
+            ->limit(5)
             ->get();
 
-        $riwayatProduksi = Produksi::join('nota_kains', 'nota_kains.nota_produksis_id', '=', 'nota_produksis.id')
-            ->join('rincian_kains', 'rincian_kains.nota_kains_id', '=', 'nota_kains.id')
-            ->select('nota_produksis.tgl_mulai', 'nota_produksis.tgl_selesai', 'nota_produksis.status', 'nota_produksis.id', 'rincian_kains.qty_kain')
-            ->where('rincian_kains.kains_id', $id)
+        $riwayatProduksi = Produksi::join('list_kains', 'list_kains.nota_produksi_id', '=', 'nota_produksis.id')
+            ->join('komposisi', 'komposisi.list_kain_id', '=', 'list_kains.id')
+            ->select('nota_produksis.*', 'komposisi.*')
+            ->where('list_kains.kain_id', $id)
+            ->orderBy('nota_produksis.tgl_mulai', 'desc')
+            ->limit(5)
             ->get();
 
-        // dd($detailKain);
-
-        return view('master.kain.detailkain', compact('detailKain', 'riwayatPemesanan', 'riwayatProduksi'));
+        return view('master.kain.detailkain', compact('kains', 'riwayatPembelian', 'riwayatProduksi'));
     }
 
     public function edit($id)
     {
-        $detailKain = Kain::join('raks', 'kains.raks_id', '=', 'raks.id')
-            ->join('kategori_kains', 'kategori_kains.id', '=', 'kains.kategori_kains_id')
-            ->select('kains.*', 'raks.lokasi', 'kategori_kains.nama as nama_kategori')
-            ->where('kains.id', $id)
-            ->get();
-
-        // dd($detailKain);
+        $kains = Kain::find($id);
 
         $raks = Rak::all();
 
         $kategoris = KategoriKain::all();
 
-        return view('master.kain.editkain', compact('detailKain', 'raks', 'kategoris'));
+        return view('master.kain.editkain', compact('kains', 'raks', 'kategoris'));
     }
 
-    public function update(KainCreateRequest $request, $id)
+    public function update(Request $request, $id)
     {
         DB::beginTransaction();
 
-        try {
-            $kain = Kain::findOrfail($id)
-                ->first();
+        $validatedData = $request->validate([
+            'kode_kain' => 'required',
+            'kategori_kain_id' => 'required',
+            'rak_id' => 'required',
+            'nama' => 'required',
+            'warna' => 'required',
+            'lebar' => 'required',
+            'foto' => 'image|mimes:png,jpg,jpeg',
+        ], [
+            'kode_kain.required' => 'Wajib diisi',
+            'kategori_kain_id.required' => 'Wajib diisi!',
+            'rak_id.required' => 'Wajib diisi!',
+            'nama.required' => 'Wajib diisi!',
+            'warna.required' => 'Wajib diisi!',
+            'lebar.required' => 'Wajib diisi!',
+            'foto.image' => 'Hanya menerima file berupa gambar!',
+            'foto.mimes' => 'Tipe file gambar yang diijinkan: .jpg, .png, .jpeg!'
+        ]);
 
-            $kain->update($request->all());
+        $imageNameBefore = Kain::where('id', $id)
+            ->value('foto');
+
+        $filePath = public_path('uploads/kains/') . $imageNameBefore;
+
+        try {
+            Kain::find($id)
+                ->update([
+                    'kode_kain' => $validatedData['kode_kain'],
+                    'kategori_kain_id' => $validatedData['kategori_kain_id'],
+                    'rak_id' => $validatedData['rak_id'],
+                    'nama' => $validatedData['nama'],
+                    'warna' => $validatedData['warna'],
+                    'lebar' => $validatedData['lebar'],
+                    'keterangan' => $request->input('keterangan'),
+                    'updated_by' => auth()->user()->id,
+                ]);
+
+            if ($request->hasFile('foto')) {
+                $image = $request->file('foto');
+                $randomName = Str::random(10);
+                $kodeKain = $validatedData['kode_kain'];
+                $extension = $image->getClientOriginalExtension();
+                $imageName = $randomName . '_' . $kodeKain . '.' . $extension;
+                $image->move(public_path('uploads/kains/'), $imageName);
+
+                if (File::exists($filePath)) {
+
+                    File::delete($filePath);
+                }
+
+                Kain::where('id', $id)
+                    ->firstOrFail()
+                    ->update([
+                        'foto' => $imageName,
+                    ]);
+            }
 
             DB::commit();
 
@@ -176,8 +208,10 @@ class KainController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
 
+            echo ($e);
+
             toast('Pengubahan data gagal!', 'warning');
-            return redirect()->route('kain.edit');
+            // return redirect()->route('kain.edit', $id);
         }
     }
 
@@ -185,38 +219,40 @@ class KainController extends Controller
     {
         DB::beginTransaction();
 
+        $imageName = Kain::where('id', $id)
+            ->value('foto');
+
+        $kain = Kain::find($id);
+
+        $filePath = public_path('uploads/kains/') . $imageName;
+
         try {
 
             $cekStokKain = Kain::where('id', $id)
                 ->value('stok');
 
-            $cekIncomingStokKain = Kain::where('id', $id)
-                ->value('incoming_stok');
+            if ($cekStokKain == 0) {
 
-
-            if ($cekStokKain == null && $cekIncomingStokKain == null) {
-
-                $cekKainNotaBeli = BeliDetail::where('kains_id', $id)
+                $cekKainNotaBeli = BeliDetail::where('kain_id', $id)
                     ->first();
 
-                $cekKainRincian = RincianKain::where('kains_id', $id)
+                $cekKainListKain = ListKain::where('kain_id', $id)
                     ->first();
 
-                // dd($cekKainNotaBeli, $cekKainRincian);
+                if ($cekKainNotaBeli == null && $cekKainListKain == null) {
 
-                if ($cekKainNotaBeli == null && $cekKainRincian == null){
-
-                    DB::statement('SET foreign_key_checks = 0');
-                    $kain = Kain::find($id);
-                    $kain->delete();
-                    DB::statement('SET foreign_key_checks = 1');
+                    Kain::find($id)->delete();                  
 
                     DB::commit();
 
+                    if (File::exists($filePath)) {
+
+                        File::delete($filePath);
+                    }
+
                     alert()->success('Berhasil!', 'Penghapusan Data Berhasil!');
                     return redirect()->route('kain.index');
-                }
-                else{
+                } else {
                     alert()->error('Gagal!', 'Tidak bisa menghapus data karena data kain berhubungan dengan data lain');
                     return redirect()->route('kain.index');
                 }
@@ -235,23 +271,10 @@ class KainController extends Controller
         }
     }
 
-    // public function softDelete()
-    // {
-    //     $queryModel = Kain::join('raks', 'kains.raks_id', '=', 'raks.id')
-    //         ->select('kains.*', 'raks.lokasi')
-    //         ->orderBy('kains.created_at', 'desc')
-    //         ->onlyTrashed()
-    //         ->get();
+    public function laporanstok()
+    {
+        $kains = Kain::all();
 
-    //     // dd($queryModel);
-
-    //     return view('master.kain.daftardeletedkain', compact('queryModel'));
-    // }
-
-    // public function restore($id)
-    // {
-    //     Produksi::withTrashed()->where('id', $id)->restore();
-    //     toast('Restore data berhasil!', 'success');
-    //     return redirect()->route('kain.delete');
-    // }
+        return view('laporan.stokkain', compact('kains'));
+    }
 }

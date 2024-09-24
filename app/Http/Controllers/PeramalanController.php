@@ -3,380 +3,3054 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
-use App\Models\Kain;
-use App\Models\BuyOrder;
-use App\Models\NotaKain;
+use App\Models\Musim;
+use App\Models\Produk;
+use App\Models\Ukuran;
+use App\Models\JualDetail;
+use App\Models\WarnaProduk;
+use App\Models\UkuranProduk;
 use Illuminate\Http\Request;
+use App\Models\KategoriProduk;
 use Illuminate\Support\Facades\DB;
-use ArielMejiaDev\LarapexCharts\Facades\LarapexChart;
+use Illuminate\Support\Facades\Session;
 
 
 class PeramalanController extends Controller
 {
+    public function musiman()
+    {
+        $produks = Produk::all();
+
+        $musims = Musim::all();
+
+        $produkwarnas = WarnaProduk::all();
+
+        $produkukurans = WarnaProduk::join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->get();
+
+        $tahuntarget = [];
+
+        $tahuntarget[] = now()->format('Y');
+        $tahuntarget[] = now()->addYears(1)->format('Y');
+
+        return view('peramalan.musiman', compact('tahuntarget', 'produks', 'produkwarnas', 'produkukurans', 'musims'));
+    }
+
+    public function musimanproses(Request $request)
+    {
+        $musiman = [];
+
+        $produk = $request->input('produk');
+
+        $musim = $request->input('musim');
+        $target_tahun = $request->input('target_tahun');
+        $data_tahun = $request->input('data_tahun');
+
+        $list_musim_perhitungan = [];
+        $list_musim_display = [];
+
+        $targettahun = Carbon::createFromFormat('Y', $target_tahun);
+        $targettahun2 = Carbon::createFromFormat('Y', $target_tahun);
+
+        for ($i = 0; $i < ($data_tahun * 2) + 1; $i++) {
+
+            $musims = Musim::join('musim_detail', 'musims.id', '=', 'musim_detail.musim_id')
+                ->where('musim_id', $musim)
+                ->where('tahun', $targettahun->format('Y'))
+                ->first();
+
+            $list_musim_perhitungan[] = [
+                'musim' => $musims->nama . ' ' . $musims->tahun,
+                'bulan_awal' => $musims->bulan_awal,
+                'bulan_akhir' => $musims->bulan_akhir
+            ];
+
+            $targettahun->subYears(1);
+        }
+
+        for ($i = 0; $i <= $data_tahun; $i++) {
+
+            $musims = Musim::join('musim_detail', 'musims.id', '=', 'musim_detail.musim_id')
+                ->where('musim_id', $musim)
+                ->where('tahun', $targettahun2->format('Y'))
+                ->first();
+
+            $list_musim_display[] = [
+                'musim' => $musims->nama . ' ' . $musims->tahun,
+                'bulan_awal' => $musims->bulan_awal,
+                'bulan_akhir' => $musims->bulan_akhir
+            ];
+
+            $targettahun2->subYears(1);
+        }
+
+        // dd($list_musim_display);
+
+        if ($produk != null) {
+
+            $ukuran = $request->input('ukuran');
+            $warna = $request->input('warna');
+
+            if ($warna == 'Semua' && $ukuran == 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $produkukurans = UkuranProduk::where('produk_warna_id', $value['id'])->get();
+
+                    foreach ($produkukurans as $value2) {
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                        for ($i = 0; $i < count($list_musim_perhitungan); $i++) {
+
+                            $bulanawal = Carbon::parse($list_musim_perhitungan[$i]['bulan_awal']);
+                            $bulanakhir = Carbon::parse($list_musim_perhitungan[$i]['bulan_akhir']);
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i+1;
+                            $arrWaktuHitungan[] = $list_musim_perhitungan[$i]['musim'] . ' ( ' . $list_musim_perhitungan[$i]['bulan_awal'] . ' - ' . $list_musim_perhitungan[$i]['bulan_akhir'] . ' )';
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i < count($list_musim_display); $i++) {
+
+                            $bulanawal = Carbon::parse($list_musim_display[$i]['bulan_awal']);
+                            $bulanakhir = Carbon::parse($list_musim_display[$i]['bulan_akhir']);
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $list_musim_display[$i]['musim'] . ' ( ' . $list_musim_display[$i]['bulan_awal'] . ' - ' . $list_musim_display[$i]['bulan_akhir'] . ' )';
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $data_tahun; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
+
+
+
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
+
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
+
+
+                        $arrMAPE2 = [];
+
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
+
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
+
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
+
+                        // dd($arrWMA, $arrMAPE, $arrMAPE2);
+
+                        $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                            ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                            ->where('produk_ukuran.id', $value2['id'])
+                            ->first();
+
+                        $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
+
+                        $musiman[$index] = [
+                            'id' => $value['id'] . '-' . $value2['id'],
+                            'jenis' => 'produk',
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi,
+                        ];
+                    }
+                }               
+
+            } elseif ($warna == 'Semua' && $ukuran != 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 0; $i < count($list_musim_perhitungan); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_perhitungan[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_perhitungan[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i + 1;
+                        $arrWaktuHitungan[] = $list_musim_perhitungan[$i]['musim'] . ' ( ' . $list_musim_perhitungan[$i]['bulan_awal'] . ' - ' . $list_musim_perhitungan[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i < count($list_musim_display); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_display[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_display[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $list_musim_display[$i]['musim'] . ' ( ' . $list_musim_display[$i]['bulan_awal'] . ' - ' . $list_musim_display[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $data_tahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    // dd($arrWMA, $arrMAPE, $arrMAPE2);
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_warna.id', $value['id'])
+                        ->where('ukurans.id', $ukuran)
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $musiman[$index] = [
+                        'id' => $value['id'] . '-' . $ukuran,
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } elseif ($warna != 'Semua' && $ukuran == 'Semua') {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 0; $i < count($list_musim_perhitungan); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_perhitungan[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_perhitungan[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i + 1;
+                        $arrWaktuHitungan[] = $list_musim_perhitungan[$i]['musim'] . ' ( ' . $list_musim_perhitungan[$i]['bulan_awal'] . ' - ' . $list_musim_perhitungan[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i < count($list_musim_display); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_display[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_display[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $list_musim_display[$i]['musim'] . ' ( ' . $list_musim_display[$i]['bulan_awal'] . ' - ' . $list_musim_display[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $data_tahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $musiman[$index] = [
+                        'id' => $warna . '-' . $value['id'],
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } else {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)
+                ->where('ukuran_id', $ukuran)
+                ->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 0; $i < count($list_musim_perhitungan); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_perhitungan[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_perhitungan[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i + 1;
+                        $arrWaktuHitungan[] = $list_musim_perhitungan[$i]['musim'] . ' ( ' . $list_musim_perhitungan[$i]['bulan_awal'] . ' - ' . $list_musim_perhitungan[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i < count($list_musim_display); $i++) {
+
+                        $bulanawal = Carbon::parse($list_musim_display[$i]['bulan_awal']);
+                        $bulanakhir = Carbon::parse($list_musim_display[$i]['bulan_akhir']);
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $list_musim_display[$i]['musim'] . ' ( ' . $list_musim_display[$i]['bulan_awal'] . ' - ' . $list_musim_display[$i]['bulan_akhir'] . ' )';
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $data_tahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $musiman[$index] = [
+                        'id' => $warna . '-' . $value['id'],
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            }
+        } else {
+            $kategoris = KategoriProduk::all();
+
+            foreach ($kategoris as $item) {
+
+                $arrAktualHitungan = [];
+                $arrBobot = [];
+                $arrWaktuHitungan = [];
+
+                for ($i = 0; $i < count($list_musim_perhitungan); $i++) {
+
+                    $bulanawal = Carbon::parse($list_musim_perhitungan[$i]['bulan_awal']);
+                    $bulanakhir = Carbon::parse($list_musim_perhitungan[$i]['bulan_akhir']);
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualHitungan[] = (int) $aktual;
+                    $arrBobot[] = $i + 1;
+                    $arrWaktuHitungan[] = $list_musim_perhitungan[$i]['musim'] . ' ( ' . $list_musim_perhitungan[$i]['bulan_awal'] . ' - ' . $list_musim_perhitungan[$i]['bulan_akhir'] . ' )';
+                }
+
+                $arrBobot = array_reverse($arrBobot);
+
+                $arrWaktuDisplay = [];
+                $arrAktualDisplay = [];
+
+                for ($i = 0; $i < count($list_musim_display); $i++) {
+
+                    $bulanawal = Carbon::parse($list_musim_display[$i]['bulan_awal']);
+                    $bulanakhir = Carbon::parse($list_musim_display[$i]['bulan_akhir']);
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->whereBetween(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), [$bulanawal->format('Y-m'), $bulanakhir->format('Y-m')])
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualDisplay[] = (int) $aktual;
+                    $arrWaktuDisplay[] = $list_musim_display[$i]['musim'] . ' ( ' . $list_musim_display[$i]['bulan_awal'] . ' - ' . $list_musim_display[$i]['bulan_akhir'] . ' )';
+                }
+
+                $arrWMA = [];
+
+                foreach ($arrWaktuHitungan as $idx => $data) {
+
+                    $index = $idx + 1;
+                    $wmaatas = 0;
+                    $jumlahBobot = 0;
+
+                    if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                        for ($i = 0; $i < $data_tahun; $i++) {
+                            $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                            $jumlahBobot += $arrBobot[$index];
+                            $index++;
+                        }
+
+                        $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                    }
+                }
+
+                $arrMAPE = [];
+
+                foreach ($arrWMA as $idx => $data) {
+                    if ($idx == 0) {
+                        $arrMAPE[] = 0;
+                    } else {
+                        $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                        if ($arrAktualHitungan[$idx] != 0) {
+                            $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                        } else {
+                            $mapee = abs($error / 1) * 100;
+                        }
+
+                        $arrMAPE[] = round($mapee, 2);
+                    }
+                }
+
+                $arrMAPE2 = [];
+
+                foreach ($arrMAPE as $idx => $data) {
+                    if ($idx != 0) {
+                        $arrMAPE2[] = $data;
+                    }
+                }
+
+                $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                $arrMAPE[0] = round($mape, 2);
+
+                if ($arrMAPE[0] <= 10) {
+                    $akurasi = 'Sangat Baik';
+                } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                    $akurasi = 'Baik';
+                } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                    $akurasi = 'Cukup Baik';
+                } else {
+                    $akurasi = 'Kurang Baik';
+                }
+
+                $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                $arrWMA = array_reverse($arrWMA);
+                $arrMAPE = array_reverse($arrMAPE);
+
+                $musiman[$item->nama] = [
+                    'id' => $item->id,
+                    'jenis' => 'kategori',
+                    'arrAktualHitungan' => $arrAktualHitungan,
+                    'dataAktualDisplay' => $arrAktualDisplay,
+                    'waktuDisplay' => $arrWaktuDisplay,
+                    'dataWMA' => $arrWMA,
+                    'dataMAPE' => $arrMAPE,
+                    'akurasi' => $akurasi,
+                ];
+            }
+        }
+
+        // dd($musiman);
+
+        Session::flash('musiman', $musiman);
+
+        return redirect()->route('peramalan.musiman')->withInput();
+    }
+
     public function bulanan()
     {
-        $kain = Kain::all();
+        $produks = Produk::all();
 
-        $currDate = Carbon::now();
-        $currDate2 = Carbon::now();
+        $produkwarnas = WarnaProduk::all();
 
-        // $date = Carbon::parse('2023-12-15');
+        $produkukurans = WarnaProduk::join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->get();
 
-        // $date = Carbon::now();
+        $bulantarget = [];
 
-        // $nextMonth = $date->addMonth()->format('F Y');
+        $bulantarget[] = Carbon::now()->format('F Y');
+        $bulantarget[] = Carbon::now()->addMonths(1)->format('F Y');
 
-        // $nextMonth = Carbon::now()->addYear();
+        return view('peramalan.bulanan', compact('bulantarget', 'produks', 'produkwarnas', 'produkukurans'));
+    }
 
-        $targetbulan = [];
+    public function getBulan($target_bulan)
+    {
         $databulan = [];
+        $currentTarget = Carbon::parse($target_bulan);
 
-        for ($i = 0; $i < 1; $i++) {
+        // for ($i = 0; $i < 3; $i++) {
 
-            $bulan = $currDate;
+            $bulan = $currentTarget->subMonths(3)->format('F Y');
+            $databulan[] = $bulan;
+        // }
 
-            $array = $bulan->addMonth();
-
-            $value = $array->format('Y-m');
-            $bulan = $array->format('F');
-            $tahun = $array->format('Y');
-
-            $targetbulan[] = [
-                'value' => $value,
-                'bulan' => $bulan,
-                'tahun' => $tahun,
-            ];
-        }
-
-        for ($i = 0; $i < 5; $i++) {
-
-            $bulan = $currDate2;
-
-            $array = $bulan->subMonth();
-
-            $value = $array->format('Y-m');
-            $bulan = $array->format('F');
-            $tahun = $array->format('Y');
-
-            $databulan[] = [
-                'value' => $value,
-                'bulan' => $bulan,
-                'tahun' => $tahun,
-            ];
-        }
-
-        // dd($databulan, $datatahun);
-
-        return view('peramalan.bulanan', compact('databulan', 'targetbulan', 'kain'));
+        return response()->json($databulan);
     }
 
     public function bulananproses(Request $request)
     {
-        $input = [];
-        $output = [];
+        $bulanan = [];
 
-        $idkain = $request->input('id-kain');
-        $targetBulan = Carbon::createFromTimestamp(strtotime($request->input('target-bulan')));
-        $dataAwal = Carbon::createFromTimestamp(strtotime($request->input('data-bulan')));
+        $produk = $request->input('produk');
 
-        $monthsDifference = $dataAwal->diffInMonths($targetBulan);
+        $target_bulan = $request->input('target_bulan');
+        $data_bulan = $request->input('data_bulan');
 
-        for ($i = 0; $i < $monthsDifference; $i++) {
-            $dataAwal = $dataAwal->subMonth();
-        }
+        if ($produk != null) {
 
-        $monthsDifference2 = $dataAwal->diffInMonths($targetBulan);
+            $ukuran = $request->input('ukuran');
+            $warna = $request->input('warna');
 
-        $targetBulan = $targetBulan->format('m-Y');
-        $newDataAwal = $dataAwal->format('m-Y');
+            if ($warna == 'Semua' && $ukuran == 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $produkukurans = UkuranProduk::where('produk_warna_id', $value['id'])->get();
+
+                    foreach ($produkukurans as $value2) {
+
+                        $targetbulan1 = Carbon::parse($target_bulan);
+                        $targetbulan2 = Carbon::parse($target_bulan);
+                        $databulan = Carbon::parse($data_bulan);
+
+                        $selisihBulan = $targetbulan1->diffInMonths($databulan);
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                        for ($i = 1; $i <= ($selisihBulan * 2) + 1; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i;
+                            $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                            $targetbulan1->subMonths(1);
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i <= $selisihBulan; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                            $targetbulan2->subMonths(1);
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $selisihBulan; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
 
 
-        $newDataAwalCarbon = Carbon::createFromFormat('m-Y', $newDataAwal);
 
-        for ($i = 0; $i <= $monthsDifference2; $i++) {
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
 
-            $bulan = $newDataAwalCarbon->format('F');
-            $tahun = $newDataAwalCarbon->format('Y');
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
 
-            $qty = NotaKain::join('rincian_kains', 'rincian_kains.nota_kains_id', '=', 'nota_kains.id')
-                ->select(DB::raw('SUM(rincian_kains.qty_kain) as total_qty'))
-                ->where('rincian_kains.kains_id', $idkain)
-                ->whereYear('nota_kains.tgl_mulai', $newDataAwalCarbon->year)
-                ->whereMonth('nota_kains.tgl_mulai', $newDataAwalCarbon->month)
-                ->value('total_qty');
-
-            $input[] = [
-                'id_kain' => $idkain,
-                'bobot' => $i + 1,
-                'bulan' => $bulan,
-                'tahun' => $tahun,
-                'qty_kain' => $qty,
-            ];
-
-            $newDataAwalCarbon->addMonth();
-        }
-
-        // dd($input);
-
-        
-
-        // foreach ($input as $data){
-
-            $targetBulan = Carbon::createFromTimestamp(strtotime($request->input('target-bulan')));
-            $dataAwal = Carbon::createFromTimestamp(strtotime($request->input('data-bulan')));
-            // $newDataAwal = $dataAwal->format('F-Y');
-
-            // $datawalFromArray = $data['bulan']. '-' . $data['tahun'];
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
 
 
-        // Cari indeks data target
-            $targetIndex = array_search([$targetBulan->format('F'), $targetBulan->year], array_column([$input['bulan'], $input['tahun']]));
+                        $arrMAPE2 = [];
 
-            // Cari indeks data awal
-            $dataAwalIndex = array_search([$dataAwal->format('F'), $dataAwal->year], array_column([$input['bulan'], $input['tahun']]));
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
 
-            // Validasi indeks
-            if ($targetIndex === false || $dataAwalIndex === false) {
-                return response()->json(['error' => 'Data target atau data awal tidak ditemukan.']);
-            }
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
 
-            // Hitung WMA dan MAPE berdasarkan selisih bulan
-            $selisihBulan = $targetBulan->diffInMonths($dataAwal);
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
 
-            // Hitung WMA dan MAPE dari data awal hingga data target
-            for ($i = $dataAwalIndex; $i <= $targetIndex; $i++) {
-                $bobotTotal = 0;
-                $forecastTotal = 0;
-                $errorTotal = 0;
+                        // dd($arrWMA, $arrMAPE, $arrMAPE2);
 
-                $periode = $selisihBulan; // Menggunakan selisih bulan sebagai periode
+                        $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                            ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                            ->where('produk_ukuran.id', $value2['id'])
+                            ->first();
 
-                // Ambil data sesuai periode
-                $periodeData = array_slice($input, $i, $periode);
+                        $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
 
-                foreach ($periodeData as $data) {
-                    // Hitung bobot sesuai dengan formula WMA
-                    $bobot = $data['bobot'];
-                    $bobotTotal += $bobot;
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
 
-                    // Hitung forecast sesuai dengan formula WMA
-                    $forecastTotal += $bobot * $data['qty_kain'];
-
-                    // Hitung error
-                    $errorTotal += abs($data['qty_kain'] - $forecastTotal);
+                        $bulanan[$index] = [
+                            'id' => $value['id'] . '-' . $value2['id'],
+                            'jenis' => 'produk',
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi,
+                        ];
+                    }
                 }
 
-                // Hitung nilai forecast, error, dan MAPE
-                $forecast = $bobotTotal > 0 ? $forecastTotal / $bobotTotal : 0;
-                $error = end($periodeData)['qty_kain'] - $forecast; // Menggunakan data terakhir dalam periode sebagai data aktual
-                $mape = $bobotTotal > 0 ? ($errorTotal / $bobotTotal) * 100 : 0;
+            } elseif ($warna == 'Semua' && $ukuran != 'Semua') {
 
-                // Tambahkan data ke array output
-                $output[] = [
-                    'id_kain' => end($periodeData)['id_kain'],
-                    'bobot' => end($periodeData)['bobot'],
-                    'bulan' => end($periodeData)['bulan'],
-                    'tahun' => end($periodeData)['tahun'],
-                    'qty_kain' => end($periodeData)['qty_kain'],
-                    'forecast' => $forecast,
-                    'error' => $error,
-                    'mape' => $mape,
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $targetbulan1 = Carbon::parse($target_bulan);
+                    $targetbulan2 = Carbon::parse($target_bulan);
+                    $databulan = Carbon::parse($data_bulan);
+
+                    $selisihBulan = $targetbulan1->diffInMonths($databulan);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihBulan * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                        $targetbulan1->subMonths(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihBulan; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                        $targetbulan2->subMonths(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihBulan; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    // dd($arrWMA, $arrMAPE, $arrMAPE2);
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_warna.id', $value['id'])
+                        ->where('ukurans.id', $ukuran)
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $bulanan[$index] = [
+                        'id' => $value['id'] . '-' . $ukuran,
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } elseif ($warna != 'Semua' && $ukuran == 'Semua') {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $targetbulan1 = Carbon::parse($target_bulan);
+                    $targetbulan2 = Carbon::parse($target_bulan);
+                    $databulan = Carbon::parse($data_bulan);
+
+                    $selisihBulan = $targetbulan1->diffInMonths($databulan);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihBulan * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                        $targetbulan1->subMonths(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihBulan; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                        $targetbulan2->subMonths(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihBulan; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $bulanan[$index] = [
+                        'id' => $warna . '-' . $value['id'],
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } else {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)
+                ->where('ukuran_id', $ukuran)
+                ->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $targetbulan1 = Carbon::parse($target_bulan);
+                    $targetbulan2 = Carbon::parse($target_bulan);
+                    $databulan = Carbon::parse($data_bulan);
+
+                    $selisihBulan = $targetbulan1->diffInMonths($databulan);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihBulan * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                        $targetbulan1->subMonths(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihBulan; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                        $targetbulan2->subMonths(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihBulan; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $bulanan[$index] = [
+                        'id' => $warna . '-' . $value['id'],
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            }
+        } else {
+            $kategoris = KategoriProduk::all();
+
+            foreach ($kategoris as $item) {
+
+                $targetbulan1 = Carbon::parse($target_bulan);
+                $targetbulan2 = Carbon::parse($target_bulan);
+                $databulan = Carbon::parse($data_bulan);
+
+                $selisihBulan = $targetbulan1->diffInMonths($databulan);
+
+                $arrAktualHitungan = [];
+                $arrBobot = [];
+                $arrWaktuHitungan = [];
+
+                for ($i = 1; $i <= ($selisihBulan * 2) + 1; $i++) {
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualHitungan[] = (int) $aktual;
+                    $arrBobot[] = $i;
+                    $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                    $targetbulan1->subMonths(1);
+                }
+
+                $arrBobot = array_reverse($arrBobot);
+
+
+
+                $arrWaktuDisplay = [];
+                $arrAktualDisplay = [];
+
+                for ($i = 0; $i <= $selisihBulan; $i++) {
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualDisplay[] = (int) $aktual;
+                    $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                    $targetbulan2->subMonths(1);
+                }
+
+                $arrWMA = [];
+
+                foreach ($arrWaktuHitungan as $idx => $data) {
+
+                    $index = $idx + 1;
+                    $wmaatas = 0;
+                    $jumlahBobot = 0;
+
+                    if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                        for ($i = 0; $i < $selisihBulan; $i++) {
+                            $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                            $jumlahBobot += $arrBobot[$index];
+                            $index++;
+                        }
+
+                        $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                    }
+                }
+
+                $arrMAPE = [];
+
+                foreach ($arrWMA as $idx => $data) {
+                    if ($idx == 0) {
+                        $arrMAPE[] = 0;
+                    } else {
+                        $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                        if ($arrAktualHitungan[$idx] != 0) {
+                            $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                        } else {
+                            $mapee = abs($error / 1) * 100;
+                        }
+
+                        $arrMAPE[] = round($mapee, 2);
+                    }
+                }
+
+                $arrMAPE2 = [];
+
+                foreach ($arrMAPE as $idx => $data) {
+                    if ($idx != 0) {
+                        $arrMAPE2[] = $data;
+                    }
+                }
+
+                $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                $arrMAPE[0] = round($mape, 2);
+
+                if ($arrMAPE[0] <= 10) {
+                    $akurasi = 'Sangat Baik';
+                } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                    $akurasi = 'Baik';
+                } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                    $akurasi = 'Cukup Baik';
+                } else {
+                    $akurasi = 'Kurang Baik';
+                }
+
+                $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                $arrWMA = array_reverse($arrWMA);
+                $arrMAPE = array_reverse($arrMAPE);
+
+                $bulanan[$item->nama] = [
+                    'id' => $item->id,
+                    'jenis' => 'kategori',
+                    'arrAktualHitungan' => $arrAktualHitungan,
+                    'dataAktualDisplay' => $arrAktualDisplay,
+                    'waktuDisplay' => $arrWaktuDisplay,
+                    'dataWMA' => $arrWMA,
+                    'dataMAPE' => $arrMAPE,
+                    'akurasi' => $akurasi,
                 ];
             }
+        }
 
+        Session::flash('bulanan', $bulanan);
 
-            // $output[] = [
-            //     'id_kain' => $data['id_kain'],
-            //     'bobot' => $data['bobot'],
-            //     'bulan' => $data['bulan'],
-            //     'tahun' => $data['tahun'],
-            //     'qty_kain' => $data['qty_kain'],
-            //     'forecast' => $forecast,
-            //     'error' => $error,
-            //     'mape' => $mape,
-            // ];
-        // }
-        // dd($newDataAwal, $datawalFromArray);
-
-        dd($output);
-
-        
-
-        // $kain = Kain::where('id','=', $idkain)->first();
-
-        return view('peramalan.bulanan', compact('databulan', 'targetbulan', 'kain', 'input'));
+        return redirect()->route('peramalan.bulanan')->withInput();
     }
 
     public function bulankhusus()
     {
-        $kain = Kain::all();
+        $produks = Produk::all();
 
-        $currDate = Carbon::now();
-        $currDate2 = Carbon::now();
+        $produkwarnas = WarnaProduk::all();
 
-        $targetbulan = [];
+        $produkukurans = WarnaProduk::join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->get();
+
         $datatahun = [];
+        $bulantarget = [];
 
-        for ($i = 0; $i < 5; $i++) {
+        $bulanTahunTarget = Carbon::now()->addMonths(1);
 
-            $bulan = $currDate;
+        for ($i = 1; $i <= 12; $i++) {
 
-            $array = $bulan->addMonth();
-
-            $array2 = $array->format('F Y');
-
-            array_push($targetbulan, $array2);
+            // $bulantarget[] = $bulanTahunTarget->format('F Y');
+            array_push($bulantarget, ["value" => $i, "name" => $bulanTahunTarget->format('F Y')]);
+            $bulanTahunTarget = $bulanTahunTarget->addMonths(1);
         }
 
-        for ($i = 0; $i < 5; $i++) {
-
-            $tahun = $currDate2;
-
-            $array = $tahun->subYear();
-
-            $array2 = $array->format('Y');
-
-            array_push($datatahun, $array2);
-        }
-
-        $chart = LarapexChart::setType('bar');
-        $id = "";
-        $mulaithn = "";
-        $targetbln = "";
-
-        return view('peramalan.bulankhusus', compact('chart', 'datatahun', 'targetbulan', 'kain', 'id', 'mulaithn', 'targetbln'));
+        return view('peramalan.bulankhusus', compact('bulantarget', 'produks', 'produkwarnas', 'produkukurans'));
     }
 
-    public function submitBulanKhusus(Request $request)
+    public function getTahun($target_bulan)
     {
-        $kain = Kain::all();
-
-        $currDate = Carbon::now();
-        $currDate2 = Carbon::now();
-
-        $targetbulan = [];
         $datatahun = [];
+        $currentTarget = Carbon::parse($target_bulan);
 
-        for ($i = 0; $i < 5; $i++) {
+        // for ($i = 0; $i < 3; $i++) {
 
-            $bulan = $currDate;
+            $tahun = $currentTarget->subYears(3)->format('F Y');
+            $datatahun[] = $tahun;
+        // }
 
-            $array = $bulan->addMonth();
+        // dd($target_bulan, $currentTarget, $datatahun);
 
-            $array2 = $array->format('F Y');
+        return response()->json($datatahun);
+    }
 
-            array_push($targetbulan, $array2);
+    public function bulankhususproses(Request $request)
+    {
+        $bulankhusus = [];
+
+        $produk = $request->input('produk');
+
+        $data_tahun = $request->input('data_tahun');
+        $target_bulan = $request->input('users-list-tags');
+        $arr_target_bulan = json_decode($target_bulan);
+
+        // dd($data_tahun, $target_bulan, $arr_target_bulan);
+
+        if ($produk != null) {
+
+            $ukuran = $request->input('ukuran');
+            $warna = $request->input('warna');
+
+            if ($warna == 'Semua' && $ukuran == 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $produkukurans = UkuranProduk::where('produk_warna_id', $value['id'])->get();
+
+                    foreach ($produkukurans as $value2) {
+
+                        $valueArr = [];
+
+                        foreach ($arr_target_bulan as $value3) {
+
+                            $targetbulan1 = Carbon::parse($value3->name);
+                            $targetbulan2 = Carbon::parse($value3->name);
+
+                            $arrAktualHitungan = [];
+                            $arrBobot = [];
+                            $arrWaktuHitungan = [];
+
+                            // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                            for ($i = 1; $i <= ($data_tahun * 2) + 1; $i++) {
+
+                                $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                    ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                    ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                    ->where('produk_ukuran.id', $value2['id'])
+                                    ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                                    ->sum('nota_jual_details.qty_produk');
+
+                                $arrAktualHitungan[] = (int) $aktual;
+                                $arrBobot[] = $i;
+                                $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                                $targetbulan1->subYears(1);
+                            }
+
+                            // dd($arrAktualHitungan);
+
+                            $arrBobot = array_reverse($arrBobot);
+
+                            $arrAktualDisplay = [];
+                            $arrWaktuDisplay = [];
+
+                            for ($i = 0; $i <= $data_tahun; $i++) {
+
+                                $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                    ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                    ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                    ->where('produk_ukuran.id', $value2['id'])
+                                    ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                                    ->sum('nota_jual_details.qty_produk');
+
+                                $arrAktualDisplay[] = (int) $aktual;
+                                $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                                $targetbulan2->subYears(1);
+                            }
+
+                            $arrWMA = [];
+
+                            foreach ($arrWaktuHitungan as $idx => $data) {
+
+                                $index = $idx + 1;
+                                $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                                $jumlahBobot = 0; // Jumlah Bobot
+
+                                if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                    for ($i = 0; $i < $data_tahun; $i++) {
+                                        $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                        $jumlahBobot += $arrBobot[$index];
+                                        $index++;
+                                    }
+
+                                    $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                                }
+                            }
+
+                            $arrMAPE = [];
+
+                            foreach ($arrWMA as $idx => $data) {
+                                if ($idx == 0) {
+                                    $arrMAPE[] = 0;
+                                } else {
+                                    $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                                    if ($arrAktualHitungan[$idx] != 0) {
+                                        $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                    } else {
+                                        $mapee = abs($error / 1) * 100;
+                                    }
+
+                                    $arrMAPE[] = round($mapee, 2);
+                                }
+                            }
+
+                            $arrMAPE2 = [];
+
+                            foreach ($arrMAPE as $idx => $data) {
+                                if ($idx != 0) {
+                                    $arrMAPE2[] = $data;
+                                }
+                            }
+
+                            $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                            $arrMAPE[0] = round($mape, 2);
+
+                            if ($arrMAPE[0] <= 10) {
+                                $akurasi = 'Sangat Baik';
+                            } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                                $akurasi = 'Baik';
+                            } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                                $akurasi = 'Cukup Baik';
+                            } else {
+                                $akurasi = 'Kurang Baik';
+                            }
+
+                            $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                            $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                            $arrWMA = array_reverse($arrWMA);
+                            $arrMAPE = array_reverse($arrMAPE);
+
+                            $valueArr[] = [
+                                'id' => $value['id'] . '-' . $value2['id'] . '-' . $value3->value,
+                                'arrAktualHitungan' => $arrAktualHitungan,
+                                'dataAktualDisplay' => $arrAktualDisplay,
+                                'waktuDisplay' => $arrWaktuDisplay,
+                                'dataWMA' => $arrWMA,
+                                'dataMAPE' => $arrMAPE,
+                                'akurasi' => $akurasi
+                            ];
+                        }
+
+                        $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                            ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                            ->where('produk_ukuran.id', $value2['id'])
+                            ->first();
+
+                        $key = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+                        $index = $produks->kode_produk . '-' . $produks->warna . '-' . $produks->nama;
+
+                        $bulankhusus[] = [
+                            "key" => $key,
+                            "id" => $index,
+                            "jenis" => 'produk',
+                            "value" => $valueArr
+                        ];
+
+                    }
+                }
+
+                // dd($bulankhusus);
+
+            } elseif ($warna == 'Semua' && $ukuran != 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $valueArr = [];
+
+                    foreach ($arr_target_bulan as $value3) {
+
+                        $targetbulan1 = Carbon::parse($value3->name);
+                        $targetbulan2 = Carbon::parse($value3->name);
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                        for ($i = 1; $i <= ($data_tahun * 2) + 1; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                                ->where('produk_warna.id', $value['id'])
+                                ->where('ukurans.id', $ukuran)
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i;
+                            $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                            $targetbulan1->subYears(1);
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i <= $data_tahun; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                                ->where('produk_warna.id', $value['id'])
+                                ->where('ukurans.id', $ukuran)
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                            $targetbulan2->subYears(1);
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $data_tahun; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
+
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
+
+                        $arrMAPE2 = [];
+
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
+
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
+
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
+
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
+
+                        $valueArr[] = [
+                            'id' => $value['id'] . '-' . $ukuran . '-' . $value3->value,
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi
+                        ];
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_warna.id', $value['id'])
+                        ->where('ukurans.id', $ukuran)
+                        ->first();
+
+                    $key = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+                    $index = $produks->kode_produk . '-' . $produks->warna . '-' . $produks->nama;
+
+                    $bulankhusus[] = [
+                        "key" => $key,
+                        "id" => $index,
+                        "jenis" => 'produk',
+                        "value" => $valueArr
+                    ];
+                }
+            } elseif ($warna != 'Semua' && $ukuran == 'Semua') {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $valueArr = [];
+
+                    foreach ($arr_target_bulan as $value3) {
+
+                        $targetbulan1 = Carbon::parse($value3->name);
+                        $targetbulan2 = Carbon::parse($value3->name);
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                        for ($i = 1; $i <= ($data_tahun * 2) + 1; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                                ->where('produk_ukuran.id', $value['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i;
+                            $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                            $targetbulan1->subYears(1);
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i <= $data_tahun; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                                ->where('produk_ukuran.id', $value['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                            $targetbulan2->subYears(1);
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $data_tahun; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
+
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
+
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
+
+                        $arrMAPE2 = [];
+
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
+
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
+
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
+
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
+
+                        $valueArr[] = [
+                            'id' => $warna . '-' . $value['id'] . '-' . $value3->value,
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi
+                        ];
+
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $key = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+                    $index = $produks->kode_produk . '-' . $produks->warna . '-' . $produks->nama;
+
+                    $bulankhusus[] = [
+                        "key" => $key,
+                        "id" => $index,
+                        "jenis" => 'produk',
+                        "value" => $valueArr
+                    ];
+                }
+            } else {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)
+                ->where('ukuran_id', $ukuran)
+                ->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $valueArr = [];
+
+                    foreach ($arr_target_bulan as $value3) {
+
+                        $targetbulan1 = Carbon::parse($value3->name);
+                        $targetbulan2 = Carbon::parse($value3->name);
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data bulan acuan hitung + 1 data sebagai tujuan
+                        for ($i = 1; $i <= ($data_tahun * 2) + 1; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->where('produk_ukuran.id', $value['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i;
+                            $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                            $targetbulan1->subYears(1);
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i <= $data_tahun; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->where('produk_ukuran.id', $value['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                            $targetbulan2->subYears(1);
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $data_tahun; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
+
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
+
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
+
+                        $arrMAPE2 = [];
+
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
+
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
+
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
+
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
+
+                        $valueArr[] = [
+                            'id' => $warna . '-' . $value['id'] . '-' . $value3->value,
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi
+                        ];
+
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $key = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+                    $index = $produks->kode_produk . '-' . $produks->warna . '-' . $produks->nama;
+
+                    $bulankhusus[] = [
+                        "key" => $key,
+                        "id" => $index,
+                        "jenis" => 'produk',
+                        "value" => $valueArr
+                    ];
+                }
+            }
+
+        } else {
+            $kategoris = KategoriProduk::all();
+
+            foreach ($kategoris as $item) {
+
+                $valueArr = [];
+
+                foreach ($arr_target_bulan as $value) {
+
+                    $targetbulan1 = Carbon::parse($value->name);
+                    $targetbulan2 = Carbon::parse($value->name);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    for ($i = 1; $i <= ($data_tahun * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                            ->where('kategori_produks.nama', $item->nama)
+                            ->where(DB::raw('DATE_FORMAT(tgl_pesan, "%Y-%m")'), '=', $targetbulan1->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targetbulan1->format('F Y');
+                        $targetbulan1->subYears(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $data_tahun; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                            ->where('kategori_produks.nama', $item->nama)
+                            ->where(DB::raw('DATE_FORMAT(tgl_pesan, "%Y-%m")'), '=', $targetbulan2->format('Y-m'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targetbulan2->format('F Y');
+                        $targetbulan2->subYears(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $data_tahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $valueArr[] = [
+                        'id' => $item->nama . '-' . $value->value,
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi
+                    ];
+
+                }
+
+                $bulankhusus[] = [
+                    "key" => $item->nama,
+                    "id" => $item->id,
+                    "jenis" => 'kategori',
+                    "value" => $valueArr
+                ];
+            }
         }
 
-        for ($i = 0; $i < 5; $i++) {
+        Session::flash('bulankhusus', $bulankhusus);
 
-            $tahun = $currDate2;
-
-            $array = $tahun->subYear();
-
-            $array2 = $array->format('Y');
-
-            array_push($datatahun, $array2);
-        }
-
-        $id = $request->input('id');
-        $mulaithn = $request->input('mulaitahun'); //2020
-        $targetbln = $request->input('targetbulan'); // String: Desember 2024
-        $trgtbln = Carbon::createFromFormat('F Y', $targetbln); // Parsing to Datetime
-        $formatted_date = $trgtbln->format('Y'); // 2024
-
-        $selisih = $formatted_date - $mulaithn; // 4
-
-        for ($i = 0; $i < $selisih; $i++) {
-
-            $tahun = $currDate2;
-
-            $array = $tahun->subYear();
-
-            $array2 = $array->format('Y');
-
-            array_push($datatahun, $array2);
-        }
-
-        $jenisKain = Kain::select('jenis_kain')->where('id', $id)->get();
-        $kains = $jenisKain->value('jenis_kain');
-
-        dd($selisih);
-
-        // $marks = 70;
-        // $grade_point = Grade::where('from', '<=', $marks)->where('to', '>=', $marks);
-        // return (int) $grade_point->value('point');
-
-
-        // $queryModel = BuyOrder::join('nota_beli_details', 'kains.id', '=', 'nota_beli_details.kains_id')
-        //     ->select('nota_belis.*', 'nota_beli_details.*')
-        //     ->where('nota_belis.tgl_pesan', 'desc')
-        //     ->get();
-
-
-
-        $chart = LarapexChart::setType('bar')
-            ->setTitle('Peramalan ' . $id . ' - ' . $kains . ' - ' . 'Bulan Khusus ' . $targetbln)
-            ->setLabels(['Aktual', 'WMA', 'MAPE'])
-            ->setSubtitle('Hasil peramalan (WMA) sebesar 850.000 Yard dengan tingkat akurasi peramalan (MAPE) sebesar 8% sehingga peramalan dinyatakan Sangat Baik')
-            ->setXAxis([
-                'Januari',
-                'Februari',
-                'Maret',
-                'April',
-                'Mei',
-                'Juni'
-            ])
-            ->setDataset([
-                [
-                    'name' => 'Aktual',
-                    'data' => [250, 700, 1200, 1500, 1300]
-                ],
-                [
-                    'name' => 'WMA',
-                    'data' => [280, 700, 1200, 1500, 1300, 1450]
-                ],
-                [
-                    'name' => 'MAPE',
-                    'data' => [20, 50, 21, 15, 17, 29]
-                ],
-            ]);
-
-        return view('peramalan.bulankhusus', compact('chart', 'datatahun', 'targetbulan', 'kain', 'id', 'mulaithn', 'targetbln'));
+        return redirect()->route('peramalan.bulankhusus')->withInput();
     }
 
     public function tahunan()
     {
-        $kain = Kain::all();
+        $produks = Produk::all();
 
-        $currDate = Carbon::now();
-        $currDate2 = Carbon::now();
+        $produkwarnas = WarnaProduk::all();
 
-        $targettahun = [];
+        $produkukurans = WarnaProduk::join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->get();
+
+        $tahuntarget = [];
+
+        $tahuntarget[] = Carbon::now()->format('Y-m');
+        $tahuntarget[] = Carbon::now()->addYears(1)->format('Y-m');
+
+        return view('peramalan.tahunan', compact('tahuntarget', 'produks', 'produkwarnas', 'produkukurans'));
+    }
+
+    public function getYear($target_tahun)
+    {
         $datatahun = [];
+        $currentTarget = Carbon::parse($target_tahun);
 
-        for ($i = 0; $i < 5; $i++) {
+        // for ($i = 0; $i < 3; $i++) {
 
-            $bulan = $currDate;
+            $tahun = $currentTarget->subYears(3)->format('Y-m');
+            $datatahun[] = $tahun;
+        // }
 
-            $array = $bulan->addYear();
+        return response()->json($datatahun);
+    }
 
-            $array2 = $array->format('Y');
+    public function tahunanproses(Request $request)
+    {
+        $tahunan = [];
 
-            array_push($targettahun, $array2);
+        $produk = $request->input('produk');
+
+        $target_tahun = $request->input('target_tahun');
+        $data_tahun = $request->input('data_tahun');
+
+        if ($produk != null) {
+
+            $ukuran = $request->input('ukuran');
+            $warna = $request->input('warna');
+
+            if ($warna == 'Semua' && $ukuran == 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $produkukurans = UkuranProduk::where('produk_warna_id', $value['id'])->get();
+
+                    foreach ($produkukurans as $value2) {
+
+                        $targettahun1 = Carbon::parse($target_tahun);
+                        $targettahun2 = Carbon::parse($target_tahun);
+                        $datatahun = Carbon::parse($data_tahun);
+
+                        $selisihTahun = $targettahun1->diffInYears($datatahun);
+
+                        $arrAktualHitungan = [];
+                        $arrBobot = [];
+                        $arrWaktuHitungan = [];
+
+                        // Buat dapetin data aktual dengan 2x data tahun acuan hitung + 1 data sebagai tujuan
+                        for ($i = 1; $i <= ($selisihTahun * 2) + 1; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun1->format('Y'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualHitungan[] = (int) $aktual;
+                            $arrBobot[] = $i;
+                            $arrWaktuHitungan[] = $targettahun1->format('Y');
+                            $targettahun1->subYears(1);
+                        }
+
+                        $arrBobot = array_reverse($arrBobot);
+
+                        $arrAktualDisplay = [];
+                        $arrWaktuDisplay = [];
+
+                        for ($i = 0; $i <= $selisihTahun; $i++) {
+
+                            $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                                ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                                ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                                ->where('produk_ukuran.id', $value2['id'])
+                                ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun2->format('Y'))
+                                ->sum('nota_jual_details.qty_produk');
+
+                            $arrAktualDisplay[] = (int) $aktual;
+                            $arrWaktuDisplay[] = $targettahun2->format('Y');
+                            $targettahun2->subYears(1);
+                        }
+
+                        $arrWMA = [];
+
+                        foreach ($arrWaktuHitungan as $idx => $data) {
+
+                            $index = $idx + 1;
+                            $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                            $jumlahBobot = 0; // Jumlah Bobot
+
+                            if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                                for ($i = 0; $i < $selisihTahun; $i++) {
+                                    $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                    $jumlahBobot += $arrBobot[$index];
+                                    $index++;
+                                }
+
+                                $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                            }
+                        }
+
+                        $arrMAPE = [];
+
+                        foreach ($arrWMA as $idx => $data) {
+                            if ($idx == 0) {
+                                $arrMAPE[] = 0;
+                            } else {
+                                $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                                if ($arrAktualHitungan[$idx] != 0) {
+                                    $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                                } else {
+                                    $mapee = abs($error / 1) * 100;
+                                }
+
+                                $arrMAPE[] = round($mapee, 2);
+                            }
+                        }
+
+                        $arrMAPE2 = [];
+
+                        foreach ($arrMAPE as $idx => $data) {
+                            if ($idx != 0) {
+                                $arrMAPE2[] = $data;
+                            }
+                        }
+
+                        $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                        $arrMAPE[0] = round($mape, 2);
+
+                        if ($arrMAPE[0] <= 10) {
+                            $akurasi = 'Sangat Baik';
+                        } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                            $akurasi = 'Baik';
+                        } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                            $akurasi = 'Cukup Baik';
+                        } else {
+                            $akurasi = 'Kurang Baik';
+                        }
+
+                        $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                            ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                            ->where('produk_ukuran.id', $value2['id'])
+                            ->first();
+
+                        $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                        $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                        $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                        $arrWMA = array_reverse($arrWMA);
+                        $arrMAPE = array_reverse($arrMAPE);
+
+                        $tahunan[$index] = [
+                            'id' => $value['id'] . '-' . $value2['id'],
+                            'jenis' => 'produk',
+                            'arrAktualHitungan' => $arrAktualHitungan,
+                            'dataAktualDisplay' => $arrAktualDisplay,
+                            'waktuDisplay' => $arrWaktuDisplay,
+                            'dataWMA' => $arrWMA,
+                            'dataMAPE' => $arrMAPE,
+                            'akurasi' => $akurasi,
+                        ];
+                    }
+                }
+
+            } elseif ($warna == 'Semua' && $ukuran != 'Semua') {
+
+                $produkwarnas = WarnaProduk::where('produk_id', $produk)->get();
+
+                foreach ($produkwarnas as $value) {
+
+                    $targettahun1 = Carbon::parse($target_tahun);
+                    $targettahun2 = Carbon::parse($target_tahun);
+                    $datatahun = Carbon::parse($data_tahun);
+
+                    $selisihTahun = $targettahun1->diffInYears($datatahun);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data tahun acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihTahun * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun1->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targettahun1->format('Y');
+                        $targettahun1->subYears(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihTahun; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_warna.id', $value['id'])
+                            ->where('ukurans.id', $ukuran)
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun2->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targettahun2->format('Y');
+                        $targettahun2->subYears(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihTahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_warna.id', $value['id'])
+                        ->where('ukurans.id', $ukuran)
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $tahunan[$index] = [
+                        'id' => $value['id'] . '-' . $ukuran,
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } elseif ($warna != 'Semua' && $ukuran == 'Semua') {
+
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $targettahun1 = Carbon::parse($target_tahun);
+                    $targettahun2 = Carbon::parse($target_tahun);
+                    $datatahun = Carbon::parse($data_tahun);
+
+                    $selisihTahun = $targettahun1->diffInYears($datatahun);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data tahun acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihTahun * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun1->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targettahun1->format('Y');
+                        $targettahun1->subYears(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihTahun; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun2->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targettahun2->format('Y');
+                        $targettahun2->subYears(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihTahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $tahunan[$index] = [
+                        'id' => $value['id'] . '-' . $ukuran,
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            } else {
+                $produkukurans = UkuranProduk::where('produk_warna_id', $warna)
+                ->where('ukuran_id', $ukuran)
+                ->get();
+
+                foreach ($produkukurans as $value) {
+
+                    $targettahun1 = Carbon::parse($target_tahun);
+                    $targettahun2 = Carbon::parse($target_tahun);
+                    $datatahun = Carbon::parse($data_tahun);
+
+                    $selisihTahun = $targettahun1->diffInYears($datatahun);
+
+                    $arrAktualHitungan = [];
+                    $arrBobot = [];
+                    $arrWaktuHitungan = [];
+
+                    // Buat dapetin data aktual dengan 2x data tahun acuan hitung + 1 data sebagai tujuan
+                    for ($i = 1; $i <= ($selisihTahun * 2) + 1; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun1->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualHitungan[] = (int) $aktual;
+                        $arrBobot[] = $i;
+                        $arrWaktuHitungan[] = $targettahun1->format('Y');
+                        $targettahun1->subYears(1);
+                    }
+
+                    $arrBobot = array_reverse($arrBobot);
+
+                    $arrAktualDisplay = [];
+                    $arrWaktuDisplay = [];
+
+                    for ($i = 0; $i <= $selisihTahun; $i++) {
+
+                        $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                            ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                            ->where('produk_ukuran.id', $value['id'])
+                            ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun2->format('Y'))
+                            ->sum('nota_jual_details.qty_produk');
+
+                        $arrAktualDisplay[] = (int) $aktual;
+                        $arrWaktuDisplay[] = $targettahun2->format('Y');
+                        $targettahun2->subYears(1);
+                    }
+
+                    $arrWMA = [];
+
+                    foreach ($arrWaktuHitungan as $idx => $data) {
+
+                        $index = $idx + 1;
+                        $wmaatas = 0; // Perhitungan WMA yang atas aktual x bobot
+                        $jumlahBobot = 0; // Jumlah Bobot
+
+                        if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                            for ($i = 0; $i < $selisihTahun; $i++) {
+                                $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                                $jumlahBobot += $arrBobot[$index];
+                                $index++;
+                            }
+
+                            $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                        }
+                    }
+
+                    $arrMAPE = [];
+
+                    foreach ($arrWMA as $idx => $data) {
+                        if ($idx == 0) {
+                            $arrMAPE[] = 0;
+                        } else {
+                            $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                            if ($arrAktualHitungan[$idx] != 0) {
+                                $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                            } else {
+                                $mapee = abs($error / 1) * 100;
+                            }
+
+                            $arrMAPE[] = round($mapee, 2);
+                        }
+                    }
+
+                    $arrMAPE2 = [];
+
+                    foreach ($arrMAPE as $idx => $data) {
+                        if ($idx != 0) {
+                            $arrMAPE2[] = $data;
+                        }
+                    }
+
+                    $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                    $arrMAPE[0] = round($mape, 2);
+
+                    if ($arrMAPE[0] <= 10) {
+                        $akurasi = 'Sangat Baik';
+                    } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                        $akurasi = 'Baik';
+                    } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                        $akurasi = 'Cukup Baik';
+                    } else {
+                        $akurasi = 'Kurang Baik';
+                    }
+
+                    $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                        ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+                        ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna')
+                        ->where('produk_ukuran.id', $value['id'])
+                        ->first();
+
+                    $index = $produks->kode_produk . ' / ' . $produks->warna . ' / ' . $produks->nama;
+
+                    $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                    $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                    $arrWMA = array_reverse($arrWMA);
+                    $arrMAPE = array_reverse($arrMAPE);
+
+                    $tahunan[$index] = [
+                        'id' => $warna . '-' . $value['id'],
+                        'jenis' => 'produk',
+                        'arrAktualHitungan' => $arrAktualHitungan,
+                        'dataAktualDisplay' => $arrAktualDisplay,
+                        'waktuDisplay' => $arrWaktuDisplay,
+                        'dataWMA' => $arrWMA,
+                        'dataMAPE' => $arrMAPE,
+                        'akurasi' => $akurasi,
+                    ];
+                }
+            }
+        } else {
+            $kategoris = KategoriProduk::all();
+
+            foreach ($kategoris as $item) {
+
+                $targettahun1 = Carbon::parse($target_tahun);
+                $targettahun2 = Carbon::parse($target_tahun);
+                $datatahun = Carbon::parse($data_tahun);
+
+                $selisihTahun = $targettahun1->diffInYears($datatahun);
+
+                $arrAktualHitungan = [];
+                $arrBobot = [];
+                $arrWaktuHitungan = [];
+
+                for ($i = 1; $i <= ($selisihTahun * 2) + 1; $i++) {
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun1->format('Y'))
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualHitungan[] = (int) $aktual;
+                    $arrBobot[] = $i;
+                    $arrWaktuHitungan[] = $targettahun1->format('Y');
+                    $targettahun1->subYears(1);
+                }
+
+                $arrBobot = array_reverse($arrBobot);
+
+                $arrWaktuDisplay = [];
+                $arrAktualDisplay = [];
+
+                for ($i = 0; $i <= $selisihTahun; $i++) {
+
+                    $aktual = JualDetail::join('nota_juals', 'nota_juals.id', '=', 'nota_jual_details.nota_jual_id')
+                        ->join('produk_ukuran', 'nota_jual_details.produk_ukuran_id', '=', 'produk_ukuran.id')
+                        ->join('produk_warna', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+                        ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+                        ->join('kategori_produks', 'produks.kategori_produk_id', '=', 'kategori_produks.id')
+                        ->where('kategori_produks.nama', $item->nama)
+                        ->where(DB::raw('DATE_FORMAT(nota_juals.tgl_pesan, "%Y")'), '=', $targettahun2->format('Y'))
+                        ->sum('nota_jual_details.qty_produk');
+
+                    $arrAktualDisplay[] = (int) $aktual;
+                    $arrWaktuDisplay[] = $targettahun2->format('Y');
+                    $targettahun2->subYears(1);
+                }
+
+                $arrWMA = [];
+
+                foreach ($arrWaktuHitungan as $idx => $data) {
+
+                    $index = $idx + 1;
+                    $wmaatas = 0;
+                    $jumlahBobot = 0;
+
+                    if (isset($arrWaktuDisplay[$idx]) && $arrWaktuDisplay[$idx] == $data) {
+
+                        for ($i = 0; $i < $selisihTahun; $i++) {
+                            $wmaatas += $arrBobot[$index] * $arrAktualHitungan[$index];
+                            $jumlahBobot += $arrBobot[$index];
+                            $index++;
+                        }
+
+                        $arrWMA[] = ceil($wmaatas / $jumlahBobot);
+                    }
+                }
+
+                $arrMAPE = [];
+
+                foreach ($arrWMA as $idx => $data) {
+                    if ($idx == 0) {
+                        $arrMAPE[] = 0;
+                    } else {
+                        $error = abs($arrWMA[$idx] - $arrAktualHitungan[$idx]);
+
+                        if ($arrAktualHitungan[$idx] != 0) {
+                            $mapee = abs($error / $arrAktualHitungan[$idx]) * 100;
+                        } else {
+                            $mapee = abs($error / 1) * 100;
+                        }
+
+                        $arrMAPE[] = round($mapee, 2);
+                    }
+                }
+
+                $arrMAPE2 = [];
+
+                foreach ($arrMAPE as $idx => $data) {
+                    if ($idx != 0) {
+                        $arrMAPE2[] = $data;
+                    }
+                }
+
+                $mape = array_sum($arrMAPE2) / count($arrMAPE2);
+                $arrMAPE[0] = round($mape, 2);
+
+                if ($arrMAPE[0] <= 10) {
+                    $akurasi = 'Sangat Baik';
+                } elseif ($arrMAPE[0] > 10 && $arrMAPE[0] <= 20) {
+                    $akurasi = 'Baik';
+                } elseif ($arrMAPE[0] > 20 && $arrMAPE[0] <= 50) {
+                    $akurasi = 'Cukup Baik';
+                } else {
+                    $akurasi = 'Kurang Baik';
+                }
+
+                $arrAktualDisplay = array_reverse($arrAktualDisplay);
+                $arrWaktuDisplay = array_reverse($arrWaktuDisplay);
+                $arrWMA = array_reverse($arrWMA);
+                $arrMAPE = array_reverse($arrMAPE);
+
+                $tahunan[$item->nama] = [
+                    'id' => $item->id,
+                    'jenis' => 'kategori',
+                    'arrAktualHitungan' => $arrAktualHitungan,
+                    'dataAktualDisplay' => $arrAktualDisplay,
+                    'waktuDisplay' => $arrWaktuDisplay,
+                    'dataWMA' => $arrWMA,
+                    'dataMAPE' => $arrMAPE,
+                    'akurasi' => $akurasi,
+                ];
+            }
         }
 
-        for ($i = 0; $i < 5; $i++) {
+        // dd($tahunan, $arrAktualHitungan);
 
-            $tahun = $currDate2;
+        Session::flash('tahunan', $tahunan);
 
-            $array = $tahun->subYear();
+        return redirect()->route('peramalan.tahunan')->withInput();
+    }
 
-            $array2 = $array->format('Y');
+    public function estimasi()
+    {
+        $produks = Produk::all();
+        $ukurans = Ukuran::all();
 
-            array_push($datatahun, $array2);
-        }
-
-        return view('peramalan.tahunan', compact('datatahun', 'targettahun', 'kain'));
+        return view('estimasi.index', compact('ukurans', 'produks'));
     }
 }

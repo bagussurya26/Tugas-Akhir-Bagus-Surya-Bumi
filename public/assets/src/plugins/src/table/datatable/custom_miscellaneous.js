@@ -198,7 +198,7 @@ $(document).ready(function() {
     "<'dt--bottom-section d-sm-flex justify-content-sm-between text-center'<'dt--pages-count  mb-sm-0 mb-3'i><'dt--pagination'p>>",
         buttons: {
             buttons: [
-                { extend: 'copy', className: 'btn' },
+                // { extend: 'copy', className: 'btn' },
                 { extend: 'csv', className: 'btn' },
                 { extend: 'excel', className: 'btn' },
                 { extend: 'print', className: 'btn' }
@@ -213,7 +213,7 @@ $(document).ready(function() {
         },
         "stripeClasses": [],
         "lengthMenu": [7, 10, 20, 50],
-        "pageLength": 10 
+        "pageLength": 10,
     } );
 
 

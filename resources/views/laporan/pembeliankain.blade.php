@@ -2,7 +2,7 @@
 
 @section('title', 'Laporan Pembelian Kain')
 
-@section('csslaporanpembeliankain')
+@section('css')
 <!-- BEGIN PAGE LEVEL STYLES -->
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
@@ -14,7 +14,7 @@
 <!-- END PAGE LEVEL STYLES -->
 @endsection
 
-@section('kontenlaporanpembeliankain')
+@section('konten')
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
@@ -26,55 +26,33 @@
 </div>
 <!-- /BREADCRUMB -->
 
-<div class="row">
+<div class="row layout-spacing page-meta">
 
     <div class="col-xl-12 col-lg-12 col-sm-12  layout-spacing">
         <div class="statbox widget box box-shadow">
             <div class="widget-content widget-content-area">
-                {{-- <div class="table-form">
-                    <div class="form-group row mr-3">
-                        <label for="min" class="col-sm-5 col-form-label col-form-label-sm">Minimum stok:</label>
-                        <div class="col-sm-7">
-                            <input type="text" class="form-control form-control-sm" name="min" id="min" placeholder="">
-                        </div>
-                    </div>
-                
-                    <div class="form-group row">
-                        <label for="max" class="col-sm-5 col-form-label col-form-label-sm">Maximum stok:</label>
-                        <div class="col-sm-7">
-                            <input type="text" class="form-control form-control-sm" name="max" id="max" placeholder="">
-                        </div>
-                    </div>
-                </div> --}}
                 <table id="html5-extension" class="table table-hover" style="width:100%">
                     <thead>
                         <tr>
-                            
-                            <th>Invoice ID</th>
-                            {{-- <th>Tanggal Pesan</th>
-                            <th>Tanggal Datang</th>
-                            <th>Tanggal Bayar</th>                            --}}
                             <th>Kode Kain</th>
-                            <th>Jenis Kain</th>
+                            <th>Kode Nota</th>
+                            <th>Tgl Terima</th>
                             <th>Supplier</th>
-                            <th class="text-center">Qty Roll</th>
-                            <th class="text-center">Panjang Yard</th>
+                            <th>Total Panjang</th>
+                            <th class="text-end">Harga</th>
                             <th class="text-end">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datalaporanpembelian)
+                        @foreach ($pembelians as $pembelian)
                         <tr>
-                            <td><span class="inv-number">{{ $datalaporanpembelian->id }}</span></td>
-                            {{-- <td>{{ date('d-m-Y', strtotime($datalaporanpembelian->tgl_pesan)) }}</td>
-                            <td>{{ date('d-m-Y', strtotime($datalaporanpembelian->tgl_datang)) }}</td>
-                            <td>{{ date('d-m-Y', strtotime($datalaporanpembelian->tgl_bayar)) }}</td> --}}
-                            <td>{{ $datalaporanpembelian->kains_id }}</td>
-                            <td>{{ $datalaporanpembelian->jenis_kain }}</td>
-                            <td>{{ $datalaporanpembelian->nama }}</td>
-                            <td class="text-center">{{ $datalaporanpembelian->qty_roll }}</td>
-                            <td class="text-center">{{ $datalaporanpembelian->yard }}</td>
-                            <td class="text-end">@currency($datalaporanpembelian->subtotal)</td>
+                            <td>{{ $pembelian->kode_kain }}</span></td>
+                            <td>{{ $pembelian->kode_nota }}</td>
+                            <td>{{ $pembelian->tgl_terima }}</td>
+                            <td>{{ $pembelian->nama_supplier }}</td>
+                            <td>{{ $pembelian->total_panjang }} {{ $pembelian->satuan }}</td>
+                            <td class="text-end">@currency($pembelian->harga)</td>
+                            <td class="text-end">@currency($pembelian->subtotal)</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -86,7 +64,7 @@
 </div>
 @endsection
 
-@section('jslaporanpembeliankain')
+@section('js')
 <!-- BEGIN PAGE LEVEL SCRIPTS -->
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
@@ -96,6 +74,31 @@
 <script src="{{ asset('assets/src/plugins/src/table/datatable/button-ext/jszip.min.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/button-ext/buttons.html5.min.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/button-ext/buttons.print.min.js') }}"></script>
-<script src="{{ asset('assets/src/plugins/src/table/datatable/custom_miscellaneous.js') }}"></script>
+<script>
+    var table = $('#html5-extension').DataTable( {
+        "dom": "<'dt--top-section'<'row'<'col-sm-12 col-md-6 d-flex justify-content-md-start justify-content-center'B><'col-sm-12 col-md-6 d-flex justify-content-md-end justify-content-center mt-md-0 mt-3'f>>>" +
+    "<'table-responsive'tr>" +
+    "<'dt--bottom-section d-sm-flex justify-content-sm-between text-center'<'dt--pages-count  mb-sm-0 mb-3'i><'dt--pagination'p>>",
+        buttons: {
+            buttons: [
+                // { extend: 'copy', className: 'btn' },
+                { extend: 'csv', className: 'btn' },
+                { extend: 'excel', className: 'btn' },
+                { extend: 'print', className: 'btn' }
+            ]
+        },
+        "oLanguage": {
+            "oPaginate": { "sPrevious": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>', "sNext": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>' },
+            "sInfo": "Showing page _PAGE_ of _PAGES_",
+            "sSearch": '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+            "sSearchPlaceholder": "Search...",
+           "sLengthMenu": "Results :  _MENU_",
+        },
+        "stripeClasses": [],
+        "lengthMenu": [7, 10, 20, 50],
+        "pageLength": 10,
+        "aaSorting": [[2,'desc']],
+    } );
+</script>
 <!-- END PAGE LEVEL SCRIPTS -->
 @endsection

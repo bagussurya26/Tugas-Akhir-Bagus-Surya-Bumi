@@ -2,8 +2,7 @@
 
 @section('title', 'Daftar Produk')
 
-@section('cssdaftarproduk')
-<!-- BEGIN PAGE LEVEL STYLES -->
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
@@ -14,20 +13,10 @@
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/dt-global_style.css') }}">
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/custom_dt_custom.css') }}">
-
-<link rel="stylesheet" href="{{ asset('assets/src/plugins/src/sweetalerts2/sweetalerts2.css') }}">
-
-<link href="{{ asset('assets/src/assets/css/light/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-<link href="{{ asset('assets/src/plugins/css/light/sweetalerts2/custom-sweetalert.css') }}" rel="stylesheet"
-    type="text/css" />
-
-<link href="{{ asset('assets/src/assets/css/dark/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-<link href="{{ asset('assets/src/plugins/css/dark/sweetalerts2/custom-sweetalert.css') }}" rel="stylesheet"
-    type="text/css" />
-<!-- END PAGE LEVEL STYLES -->
 @endsection
 
-@section('kontendaftarproduk')
+@section('konten')
+@include('sweetalert::alert')
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
@@ -46,12 +35,6 @@
             <span class="btn-text-inner">Tambah Data</span>
         </button>
     </a>
-    {{-- <a href="{{ route('produk.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
-        </button>
-    </a> --}}
 </div>
 
 
@@ -66,61 +49,45 @@
                             <th>Kode</th>
                             <th>Nama</th>
                             <th>Kategori</th>
-                            {{-- <th>Tipe Fit Badan</th>
-                            <th>Tipe Lengan</th> --}}
-                            <th class="text-center">Lokasi Rak</th>
-                            <th class="text-center">Status</th>
-                            <th>Total Stok</th>
-                            <th class="text-end">Harga</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th class="text-center">Stok</th>
+                            <th class="text-center">Rak</th>
+                            <th class="text-center dt-no-sorting" style="width: 5%;">Action</th>
                         </tr>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $dataproduk)
+                        @foreach ($produks as $idx => $produk)
                         <tr>
-                            <td><a href="{{ route('produk.show', $dataproduk->id) }}">{{ $dataproduk->kode_pakaian }}</a></td>
-                            <td><a href="{{ route('produk.show', $dataproduk->id) }}">{{ $dataproduk->nama }}</a></td>
-                            <td>{{ $dataproduk->kategori_nama }}</td>
-                            {{-- <td>{{ $dataproduk->tipe_fit }}</td>
-                            <td>{{ $dataproduk->tipe_lengan }}</td> --}}
-                            <td class="text-center">{{ $dataproduk->raks->lokasi }}</td>
+                            <td><a href="{{ route('produk.show', $produk->id) }}">{{ $produk->kode_produk }}</a></td>
+                            <td><a href="{{ route('produk.show', $produk->id) }}">{{ $produk->nama }}</a></td>
+                            <td>{{ $produk->kategori_produks->nama }}</td>
+                            @if ($stok[$idx] > 0)
+                                <td class="text-center"><span class="badge badge-light-success">Masih Ada</span>
+                                </td>
+                            @else
+                                <td class="text-center"><span class="badge badge-light-danger">Habis</span>
+                                </td>
+                            @endif
+                            
+                            <td class="text-center">{{ $produk->raks->lokasi }}</td>
 
-                            @if ($dataproduk->total_qty < 1) <td class="text-center"><span
-                                    class="badge badge-light-danger">Habis</span></td>
-                                @elseif ($dataproduk->total_qty <= 100) <td class="text-center"><span
-                                        class="badge badge-light-warning">Hampir
-                                        Habis</span></td>
-                                    @else
-                                    <td class="text-center"><span class="badge badge-light-success">Masih Ada</span>
-                                    </td>
-                                    @endif
+                            <td class="text-center">
 
-                                    <td>{{ $dataproduk->total_qty }}</td>
-                                    <td class="text-end">{{ $dataproduk->harga }}</td>
+                                <form method="POST" action="{{ route('produk.destroy', $produk->id) }}">
+                                    @csrf
+                                    @method("DELETE")
 
-                                    <td class="text-center">
+                                    <a class="btn btn-light-primary btn-icon bs-tooltip"
+                                        href="{{ route('produk.show', $produk->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Edit" data-original-title="Edit"><i
+                                            data-feather="edit-3"></i></a>
 
-                                        <form method="POST" action="{{ route('produk.destroy', $dataproduk->id) }}">
-                                            @csrf
-                                            @method("DELETE")
-
-                                            <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                                href="{{ route('produk.edit', $dataproduk->id) }}"
-                                                data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"
-                                                data-original-title="Edit"><i data-feather="edit-3"></i></a>
-
-                                            <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                                href="{{ route('produk.destroy', $dataproduk->id) }}"
-                                                data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
-                                                data-confirm-delete="true" data-original-title="Delete" type="submit"><i
-                                                    data-feather="trash"></i></a>
-
-                                            {{-- <a href="{{ route('kain.destroy', $datakain->id) }}"
-                                                class="btn btn-danger" data-confirm-delete="true"
-                                                type="submit">Delete</a> --}}
-                                        </form>
-                                    </td>
+                                    <a class="btn btn-light-danger btn-icon bs-tooltip"
+                                        href="{{ route('produk.destroy', $produk->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Delete" data-confirm-delete="true"
+                                        data-original-title="Delete" type="submit"><i data-feather="trash"></i></a>
+                                </form>
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -131,8 +98,7 @@
 </div>
 @endsection
 
-@section('jsdaftarproduk')
-<!-- BEGIN PAGE LEVEL SCRIPTS -->
+@section('js')
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>
@@ -155,32 +121,11 @@
             },
             "stripeClasses": [],
             "lengthMenu": [5, 10, 20, 50],
-            "pageLength": 10
+            "pageLength": 10,
+            "aaSorting": [[0,'asc']],
         });
 
         multiCheck(c3);
 </script>
 
-<script>
-    document.querySelector('.warning-confirm1').addEventListener('click', function() {
-    Swal.fire({
-    title: 'Are you sure?',
-    text: "You won't be able to revert this!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-    if (result.isConfirmed) {
-    Swal.fire(
-    'Deleted!',
-    'Your file has been deleted.',
-    'success'
-    )
-    }
-    })
-    })
-</script>
-<!-- END PAGE LEVEL SCRIPTS -->
 @endsection

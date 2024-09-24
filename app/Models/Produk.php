@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -10,34 +12,35 @@ class Produk extends Model
 {
     use HasFactory;
 
-    protected $table = 'pakaians';
-    // protected $keyType = 'string';
-    // public $incrementing = false;
-
     protected $fillable = [
-        'kode_pakaian',
-        'kategori_pakaians_id',
-        'raks_id',
+        'kode_produk',
+        'kategori_produk_id',
+        'rak_id',
         'nama',
         'tipe_fit',
         'tipe_lengan',
-        'total_qty',
-        'harga',
-        'keterangan'
+        'foto',
+        'stok',
+        'incoming_stok',
+        'keterangan',
+        'created_by',
+        'updated_by',
     ];
 
     public function raks()
     {
-        return $this->belongsTo(Rak::class);
+        return $this->belongsTo(Rak::class, 'rak_id');
     }
 
-    public function produkfotos()
+    public function kategori_produks()
     {
-        return $this->hasMany(ProdukFoto::class);
+        return $this->belongsTo(KategoriProduk::class, 'kategori_produk_id');
     }
 
-    public function kategoris()
+    public function produk_warna()
     {
-        return $this->belongsTo(KategoriProduk::class);
+        return $this->hasMany(WarnaProduk::class, 'produk_id');
     }
+
+    
 }

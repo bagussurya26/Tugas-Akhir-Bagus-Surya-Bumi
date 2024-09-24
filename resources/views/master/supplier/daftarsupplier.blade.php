@@ -2,7 +2,7 @@
 
 @section('title', 'Daftar Supplier')
 
-@section('cssdaftarsupplier')
+@section('css')
 <!-- BEGIN PAGE LEVEL STYLES -->
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
@@ -17,7 +17,7 @@
 <!-- END PAGE LEVEL STYLES -->
 @endsection
 
-@section('kontendaftarsupplier')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
@@ -38,12 +38,6 @@
             <span class="btn-text-inner">Tambah Data</span>
         </button>
     </a>
-    <a href="{{ route('supplier.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
-        </button>
-    </a>
 </div>
 
 <div class="row layout-spacing">
@@ -53,37 +47,41 @@
                 <table id="style-3" class="table style-3 table-hover">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th style="width: 7%;">Id</th>
                             <th>Nama</th>
                             <th>Nomor HP</th>
-                            <th>Alamat</th>
                             <th>Email</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th class="text-center dt-no-sorting" style="width: 5%;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datasupplier)
+                        @foreach ($suppliers as $supplier)
                         <tr>
-                            <td><a href="{{ route('supplier.show', $datasupplier->id) }}">{{ $datasupplier->id }}</a>
+                            <td><a href="{{ route('supplier.show', $supplier->id) }}">{{ $supplier->id }}</a>
                             </td>
-                            <td><a href="{{ route('supplier.show', $datasupplier->id) }}">{{ $datasupplier->nama }}</a>
+                            <td><a href="{{ route('supplier.show', $supplier->id) }}">{{ $supplier->nama }}</a>
                             </td>
-                            <td>{{ $datasupplier->no_hp }}</td>
-                            <td>{{ $datasupplier->alamat }}</td>
-                            <td>{{ $datasupplier->email }}</td>
+                            <td>{{ $supplier->no_hp }}</td>
+                            
+                            @if ($supplier->email != null)
+                                <td>{{ $supplier->email }}</td>
+                            @else
+                                <td>-</td>
+                            @endif
+                            
 
                             <td class="text-center">
-                                <form method="POST" action="{{ route('supplier.destroy', $datasupplier->id) }}">
+                                <form method="POST" action="{{ route('supplier.destroy', $supplier->id) }}">
                                     @csrf
                                     @method("DELETE")
 
                                     <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                        href="{{ route('supplier.edit', $datasupplier->id) }}" data-bs-toggle="tooltip"
+                                        href="{{ route('supplier.edit', $supplier->id) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Edit" data-original-title="Edit"><i
                                             data-feather="edit-3"></i></a>
 
                                     <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                        href="{{ route('supplier.destroy', $datasupplier->id) }}"
+                                        href="{{ route('supplier.destroy', $supplier->id) }}"
                                         data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
                                         data-confirm-delete="true" data-original-title="Delete" type="submit"><i
                                             data-feather="trash"></i></a>
@@ -99,7 +97,7 @@
 </div>
 @endsection
 
-@section('jsdaftarsupplier')
+@section('js')
 <!-- BEGIN PAGE LEVEL SCRIPTS -->
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>

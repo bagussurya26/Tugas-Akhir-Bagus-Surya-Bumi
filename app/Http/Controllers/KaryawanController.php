@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Produksi;
+use Carbon\Carbon;
+use App\Models\User;
 use App\Models\Karyawan;
 use App\Models\NotaBeli;
 use App\Models\NotaKain;
@@ -28,84 +31,101 @@ class KaryawanController extends Controller
 
     public function store(Request $request)
     {
+        DB::beginTransaction();
+
         $validatedData = $request->validate([
-            'nama' => 'required|unique:karyawans,nama',
-            'no_hp' => '',
+            'nama' => 'required',
+            'no_hp' => 'required',
         ], [
             'nama.required' => 'Wajib diisi!',
-            'nama.unique' => 'Nama Sudah Ada!',
+            'no_hp.required' => 'Wajib diisi!',
         ]);
 
-        Karyawan::create($validatedData);
+        try {
+            Karyawan::create([
+                'nama' => $validatedData['nama'],
+                'no_hp' => $validatedData['no_hp'],
+                'created_by' => auth()->user()->id,
+                'updated_by' => auth()->user()->id,
+            ]);
 
-        toast('Penambahan data berhasil!', 'success');
-        return redirect()->route('karyawan.create');
+            DB::commit();
+
+            toast('Penambahan data berhasil!', 'success');
+            return redirect()->route('karyawan.create');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            toast('Penambahan data gagal!', 'warning');
+            return redirect()->route('karyawan.create')->withInput();
+        }
     }
 
     public function show($id)
     {
-        
+        // 
     }
 
     public function edit($id)
     {
-        $detailKaryawan = Karyawan::where('id', $id)
-            ->get();
+        $karyawans = Karyawan::find($id);
 
-        return view('hrd.karyawan.editkaryawan', compact('detailKaryawan'));
+        return view('hrd.karyawan.editkaryawan', compact('karyawans'));
     }
 
     public function update(Request $request, $id)
     {
-        $cekNamaKaryawan = Karyawan::where('id', $id)
-            ->value('nama');
+        DB::beginTransaction();
+
+        $validatedData = $request->validate([
+            'nama' => 'required',
+            'no_hp' => 'required',
+        ], [
+            'nama.required' => 'Wajib diisi!',
+            'no_hp.required' => 'Wajib diisi!',
+        ]);
 
         $karyawan = Karyawan::find($id);
 
-        if ($cekNamaKaryawan == $request->input('nama')) {
-            $validatedData = $request->validate([
-                'nama' => 'required',
-                'no_hp' => '',
-            ], [
-                'nama.required' => 'Wajib diisi!',
-            ]);
-            
-            $karyawan->update($validatedData);
-        }
-        else{
-            $validatedData = $request->validate([
-                'nama' => 'required|unique:karyawans,nama',
-                'no_hp' => '',
-            ], [
-                'nama.required' => 'Wajib diisi!',
-                'nama.unique' => 'Nama Sudah Ada!',
-            ]);
+        try {
+            Karyawan::find($id)
+                ->update([
+                    'nama' => $validatedData['nama'],
+                    'no_hp' => $validatedData['no_hp'],
+                    'updated_by' => auth()->user()->id,
+                ]);
 
-            $karyawan->update($validatedData);
-        }
+            DB::commit();
 
-        toast('Perubahan data berhasil!', 'success');
-        return redirect()->route('karyawan.index');
+            toast('Pengubahan data berhasil!', 'success');
+            return redirect()->route('karyawan.index');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            toast('Pengubahan data gagal!', 'warning');
+            return redirect()->route('karyawan.edit', $id);
+        }
     }
 
     public function destroy($id)
     {
         DB::beginTransaction();
 
+        $karyawan = Karyawan::find($id);
+
         try {
 
-            $cekKaryawanNotaKain = NotaKain::where('karyawans_id', $id)
+            $cekKaryawanNotaKain = Produksi::where('karyawan_id', $id)
                 ->first();
 
-            $cekKaryawanNotaBeli = NotaBeli::where('karyawans_id', $id)
+            $cekKaryawanNotaBeli = NotaBeli::where('karyawan_id', $id)
                 ->first();
 
             if ($cekKaryawanNotaKain == null && $cekKaryawanNotaBeli == null) {
 
-                DB::statement('SET foreign_key_checks = 0');
-                $karyawan = Karyawan::find($id);
-                $karyawan->delete();
-                DB::statement('SET foreign_key_checks = 1');
+                Karyawan::find($id)->delete();
 
                 DB::commit();
 

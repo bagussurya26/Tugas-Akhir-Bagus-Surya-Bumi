@@ -2,31 +2,28 @@
 
 @section('title', 'Pembelian')
 
-@section('cssdaftarnotabeli')
-<!--  BEGIN CUSTOM STYLE FILE  -->
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/light/table/datatable/dt-global_style.css') }}">
-<link href="{{ asset('assets/src/assets/css/light/apps/invoice-list.css') }}" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/light/table/datatable/custom_dt_custom.css') }}">
-
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/dt-global_style.css') }}">
-<link href="{{ asset('assets/src/assets/css/dark/apps/invoice-list.css') }}" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/custom_dt_custom.css') }}">
-<!--  END CUSTOM STYLE FILE  -->
 @endsection
 
-@section('kontendaftarnotabeli')
+@section('konten')
+@include('sweetalert::alert')
+
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="#">Transaksi</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Buy Order</li>
+            <li class="breadcrumb-item active" aria-current="page">Pembelian</li>
         </ol>
     </nav>
 </div>
@@ -39,12 +36,6 @@
             <span class="btn-text-inner">Tambah Data</span>
         </button>
     </a>
-    {{-- <a href="{{ route('buyorder.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
-        </button>
-    </a> --}}
 </div>
 
 <div class="row layout-spacing">
@@ -55,70 +46,61 @@
                     <thead>
                         <tr>
                             <th>Kode</th>
+                            <th>Tgl Pesan</th>
+                            <th>Tgl Terima</th>
                             <th>Supplier</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center">Total Qty Roll</th>
+                            {{-- <th class="text-center">Status</th> --}}
+                            <th class="text-center">Total Roll</th>
                             <th class="text-end">Grand Total</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            {{-- <th class="text-center dt-no-sorting" style="width: 5%;">Action</th> --}}
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datanotabeli)
+                        @foreach ($pembelians as $pembelian)
                         <tr>
-                            <td><a href="{{ route('notabeli.show', $datanotabeli->id) }}">{{ $datanotabeli->id }}</span>
+                            <td><a href="{{ route('notabeli.show', $pembelian->id) }}">{{ $pembelian->kode_nota
+                                    }}</a>
                             </td>
 
-                            <td>{{ $databuyorder->nama_supplier }}</td>
-                            {{-- <td>{{ date('d-m-Y', strtotime($databuyorder->tgl_pesan)) }}</td>
+                            <td><a href="{{ route('notabeli.show', $pembelian->id) }}">{{ $pembelian->tgl_pesan
+                                    }}</a></td>
 
-                            @if ($databuyorder->tgl_datang == null)
-                            <td>Belum Datang</td>
-                            @else
-                            <td>{{ date('d-m-Y', strtotime($databuyorder->tgl_datang)) }}</td>
-                            @endif
+                                    <td><a href="{{ route('notabeli.show', $pembelian->id) }}">{{ $pembelian->tgl_terima
+                                            }}</a></td>
 
-                            @if ($databuyorder->tgl_bayar == null)
-                            <td>Belum Lunas</td>
+                            <td>{{ $pembelian->suppliers->nama }}</td>
+
+                            {{-- @if ($pembelian->status == 'Belum Terima')
+                            <td class="text-center"><span class="badge badge-light-warning">{{ $pembelian->status
+                                    }}</span>
+                            </td>
                             @else
-                            <td>{{ date('d-m-Y', strtotime($databuyorder->tgl_bayar)) }}</td>
+                            <td class="text-center"><span class="badge badge-light-success">{{ $pembelian->status
+                                    }}</span></td>
                             @endif --}}
 
+                            <td class="text-center">{{ $pembelian->total_qty_roll }}</td>
+                            <td class="text-end">@currency($pembelian->grand_total)</td>
 
-                            @if ($datanotabeli->status == "Selesai")
-                            <td><span class="badge badge-light-success">{{ $datanotabeli->status }}</span>
-                            </td>
-                            {{-- @elseif ($databuyorder->stok <= 100) <td><span class="badge badge-light-warning">Hampir
-                                    Habis</span></td> --}}
-                                @else
-                                <td class="text-center"><span class="badge badge-light-warning">{{ $datanotabeli->status }}</span></td>
-                                @endif
+                            {{-- <td class="text-center">
 
-                                <td class="text-center">{{ $datanotabeli->total_qty }}</td>
-                                <td class="text-end">@currency($datanotabeli->grand_total)</td>
+                                <form method="POST" action="{{ route('notabeli.destroy', $pembelian->id) }}">
+                                    @csrf
+                                    @method("DELETE")
 
-                                <td class="text-center">
+                                    <a class="btn btn-light-primary btn-icon bs-tooltip"
+                                        href="{{ route('notabeli.edit', $pembelian->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Edit" data-original-title="Edit"><i
+                                            data-feather="edit-3"></i></a>
+                                    @if ($pembelian->status == 'Belum Terima')
+                                    <a class="btn btn-light-danger btn-icon bs-tooltip"
+                                        href="{{ route('notabeli.destroy', $pembelian->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Delete" data-confirm-delete="fa"
+                                        data-original-title="Delete" type="submit"><i data-feather="trash"></i></a>
+                                    @endif
 
-                                    <form method="POST" action="{{ route('notabeli.destroy', $datanotabeli->id) }}">
-                                        @csrf
-                                        @method("DELETE")
-
-                                        @if ($datanotabeli->status == 'Selesai')
-
-                                        @else
-                                        {{-- <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                            href="{{ route('notabeli.edit', $datanotabeli->id) }}"
-                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"
-                                            data-original-title="Edit"><i data-feather="edit-3"></i></a> --}}
-                                        <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                            href="{{ route('notabeli.destroy', $datanotabeli->id) }}"
-                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
-                                            data-confirm-delete="fa" data-original-title="Delete" type="submit"><i
-                                                data-feather="trash"></i></a>
-                                        @endif
-
-
-                                    </form>
-                                </td>
+                                </form>
+                            </td> --}}
                         </tr>
                         @endforeach
                     </tbody>
@@ -129,14 +111,10 @@
 </div>
 @endsection
 
-@section('jsdaftarnotabeli')
-<!-- BEGIN PAGE LEVEL SCRIPTS -->
+@section('js')
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>
-<script src="{{ asset('assets/src/plugins/src/table/datatable/button-ext/dataTables.buttons.min.js') }}"></script>
-<script src="{{ asset('assets/src/assets/js/apps/invoice-list.js') }}"></script>
-<!-- END PAGE LEVEL SCRIPTS -->
 
 <script>
     c3 = $('#style-3').DataTable({
@@ -155,7 +133,8 @@
             },
             "stripeClasses": [],
             "lengthMenu": [5, 10, 20, 50],
-            "pageLength": 10
+            "pageLength": 10,
+            "aaSorting": [[1,'desc']],
         });
 
         multiCheck(c3);

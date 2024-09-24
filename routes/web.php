@@ -1,15 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RakController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KainController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\MusimController;
 use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\UkuranController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\NotaBeliController;
 use App\Http\Controllers\NotaJualController;
 use App\Http\Controllers\ProduksiController;
 use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\PembelianController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PeramalanController;
+use App\Http\Controllers\KategoriKainController;
+use App\Http\Controllers\KategoriProdukController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,114 +29,123 @@ use App\Http\Controllers\PeramalanController;
 |
 */
 
-Route::get('/', function () {
-    return view('dashboard.analytics');
-})->name('home');
+// Login Logout ================================================================================================================
+Route::get('login', [AuthController::class, 'index'])->name('login')->middleware('guest');
+Route::post('post-login', [AuthController::class, 'postLogin'])->name('login.post');
+// Route::get('registration', [AuthController::class, 'registration'])->name('register');
+// Route::post('post-registration', [AuthController::class, 'postRegistration'])->name('register.post');
+// Route::get('dashboard', [AuthController::class, 'dashboard']);
+Route::get('logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Dashboard ===========================================
-Route::get('dasboard/analytics', function () {
-    return view('dashboard.analytics');
-})->name('dashboard.analytics');
+// Dashboard ===================================================================================================================
+Route::get('/', [DashboardController::class, 'getRevenue'])->name('dashboard')->middleware('auth');
 
-Route::get('dasboard/sales', function () {
-    return view('dashboard.sales');
-})->name('dashboard.sales');
+// Master ======================================================================================================================
+// Kain
+Route::resource('kain', KainController::class)->middleware('auth');
 
-// Master ===========================================
-Route::resources([
-    'kain' => KainController::class,
-    'produk' => ProdukController::class,
-    'produksi' => ProduksiController::class,
-    'supplier' => SupplierController::class,
-    'notabeli' => NotaBeliController::class,
-    'notajual' => NotaJualController::class,
-    'karyawan' => KaryawanController::class,
-]);
+// Musim
+Route::resource('musim', MusimController::class)->middleware('auth')->except('edit');
+Route::put('musimdetail/edit/{id}', [MusimController::class, 'editdetail'])->name('musimdetail.update')->middleware('auth');
+Route::post('musimdetail/create', [MusimController::class, 'insertdetail'])->name('musimdetail.create')->middleware('auth');
 
-// Route::controller(KainController::class)->group(function () {
-//     Route::get('kain-deleted', 'softDelete')->name('kain.delete');
-//     Route::get('kain/{id}/restore', 'restore')->name('kain.restore');
-    
-// });
+// Produk
+Route::resource('produk', ProdukController::class)->middleware('auth')->except('edit', 'update');
+Route::get('getUkuran/{kategori}', [ProdukController::class, 'getUkuran'])->name('produk.ukuran')->middleware('auth');
+Route::get('getUkuranEdit/{kategori}/{id}', [ProdukController::class, 'getUkuranEdit'])->name('produk.ukuranedit')->middleware('auth');
+Route::put('produk/keterangan/{id}', [ProdukController::class, 'updateKeterangan'])->name('produk.update.keterangan')->middleware('auth');
+Route::put('produk/info/{id}', [ProdukController::class, 'updateInfoDasarProduk'])->name('produk.update.info')->middleware('auth');
+Route::put('produk/update/warna/{id}', [ProdukController::class, 'updateWarnaProduk'])->name('produk.update.warna')->middleware('auth');
+Route::put('produk/insert/warna/{id}', [ProdukController::class, 'tambahWarnaProduk'])->name('produk.insert.warna')->middleware('auth');
+Route::put('produk/harga/{id}', [ProdukController::class, 'updateHargaProduk'])->name('produk.update.harga')->middleware('auth');
 
-// Route::controller(ProdukController::class)->group(function () {
-//     Route::get('produk-deleted', 'softDelete')->name('produk.delete');
-//     Route::get('produk/{id}/restore', 'restore')->name('produk.restore');
+// Produksi
+Route::resource('produksi', ProduksiController::class)->middleware('auth');
+// Route::put('produksi/notapotong/{id}', [ProduksiController::class, 'updateNotaPotong'])->name('produksi.update.notapotong')->middleware('auth');
+Route::put('produksi/keterangan/{id}', [ProduksiController::class, 'updateKeterangan'])->name('produksi.update.keterangan')->middleware('auth');
+Route::put('produksi/target/{id}', [ProduksiController::class, 'updateTargetProduk'])->name('produksi.update.target')->middleware('auth');
+Route::get('produksi/kain/{filter}', [ProduksiController::class, 'getProduksiKain'])->name('produksi.kain')->middleware('auth');
+Route::get('produksi/produk/{filter}', [ProduksiController::class, 'getProduksiProduk'])->name('produksi.produk')->middleware('auth');
+Route::get('getWarnaProduk/{id}', [ProduksiController::class, 'getWarnaProduk'])->name('getWarnaProduk')->middleware('auth');
+Route::get('getUkuranProduk/{id}', [ProduksiController::class, 'getUkuranProduk'])->name('getUkuranProduk')->middleware('auth');
+Route::get('getAvgQty/{produk_ukuran_id}', [ProduksiController::class, 'getAvgQty'])->name('getAvgQty')->middleware('auth');
 
-// });
+// Supplier
+Route::resource('supplier', SupplierController::class)->middleware('role:Pemilik');
 
-// Route::controller(ProduksiController::class)->group(function () {
-//     Route::get('produksi-deleted', 'softDelete')->name('produksi.delete');
-//     Route::get('produksi/{id}/restore', 'restore')->name('produksi.restore');
+// Kategori Kain
+Route::resource('kategorikain', KategoriKainController::class)->except(['show'])->middleware('auth');
 
-// });
+// Kategori Produk
+Route::resource('kategoriproduk', KategoriProdukController::class)->except(['show'])->middleware('auth');
 
-// Route::controller(SupplierController::class)->group(function () {
-//     Route::get('supplier-deleted', 'softDelete')->name('supplier.delete');
-//     Route::get('supplier/{id}/restore', 'restore')->name('supplier.restore');
+// Rak
+Route::resource('rak', RakController::class)->except(['show'])->middleware('auth');
 
-// });
+// Ukuran
+Route::resource('ukuran', UkuranController::class)->except(['show'])->middleware('auth');
 
-// Route::controller(BuyOrderController::class)->group(function () {
-//     Route::get('buyorder-deleted', 'softDelete')->name('buyorder.delete');
-//     Route::get('buyorder/{id}/restore', 'restore')->name('buyorder.restore');
+// Transaksi ================================================================================================================== 
+// Nota Beli
+Route::resource('notabeli', NotaBeliController::class)->middleware('role:Pemilik')->except('edit', 'update', 'destroy');
+Route::put('notabeli/keterangan/{id}', [NotaBeliController::class, 'updateKeterangan'])->name('notabeli.update.keterangan')->middleware('role:Pemilik');
+Route::put('notabeli/foto/{id}', [NotaBeliController::class, 'updateFoto'])->name('notabeli.update.foto')->middleware('role:Pemilik');
+Route::get('notabeli/kain/{filter}', [NotaBeliController::class, 'getPembelianKain'])->name('notabeli.kain')->middleware('role:Pemilik');
+Route::get('notabeli/supplier/{filter}', [NotaBeliController::class, 'getPembelianSupplier'])->name('notabeli.supplier')->middleware('role:Pemilik');
 
-// });
+// Nota Jual
+Route::resource('notajual', NotaJualController::class)->except(['edit', 'update', 'destroy'])->middleware('auth');
+Route::get('notajual/produk/{filter}', [NotaJualController::class, 'getPenjualanProduk'])->name('notajual.produk')->middleware('auth');
+Route::get('getProdukWarnaJual/{id}', [NotaJualController::class, 'getProdukWarna'])->name('getProdukWarna')->middleware('auth');
+Route::get('getUkuranProdukJual/{id}', [NotaJualController::class, 'getUkuranProduk'])->name('getUkuranProduk')->middleware('auth');
+Route::get('getHargaProduk/{idwarna}/{idukuran}', [NotaJualController::class, 'getHargaProduk'])->name('getHargaProduk')->middleware('auth');
+Route::get('getKategori', [NotaJualController::class, 'getKategori'])->name('getKategori')->middleware('auth');
+Route::get('getInfoProduk/{warna_id}/{ukuran_id}', [NotaJualController::class, 'getInfoProduk'])->name('getInfoProduk')->middleware('auth');
 
 
+// HRD ======================================================================================================================== 
+// User
+Route::resource('user', UserController::class)->middleware('role:Pemilik');
 
-// Laporan ===========================================
-Route::get('laporan/stokkain', [KainController::class, 'laporanstok'])->name('laporan.stokkain');
+// Karyawan
+Route::resource('karyawan', KaryawanController::class)->except(['show'])->middleware('auth');
 
-Route::get('laporan/pembeliankain', [PembelianController::class, 'laporanpembeliankain'])->name('laporan.pembeliankain');
 
-Route::get('laporan/produksi', [ProduksiController::class, 'laporanproduksi'])->name('laporan.produksi');
+// Laporan =====================================================================================================================
+Route::get('laporan/stokkain', [KainController::class, 'laporanstok'])->name('laporan.stokkain')->middleware('auth');
+Route::get('laporan/pembeliankain', [NotaBeliController::class, 'laporanpembeliankain'])->name('laporan.pembeliankain')->middleware('role:Pemilik');
+Route::get('laporan/produksi', [ProduksiController::class, 'laporanproduksi'])->name('laporan.produksi')->middleware('auth');
+Route::get('laporan/penggunaankain', [ProduksiController::class, 'laporanpenggunaankain'])->name('laporan.penggunaankain')->middleware('auth');
 
-// HRD ===========================================
-// Route::get('hrd/users', function () {
-//     return view('hrd.daftaruser');
-// })->name('hrd.daftaruser');
-
-// Route::get('hrd/users/1', function () {
-//     return view('hrd.detailuser');
-// })->name('hrd.detailuser');
-
-// Route::get('hrd/users/1/settings', function () {
-//     return view('hrd.settinguser');
-// })->name('hrd.settinguser');
-
-// Peramalan ===========================================
-// Route::get('peramalan/tahunan', function () {
-//     return view('peramalan.tahunan');
-// })->name('peramalan.tahunan');
-
+// Peramalan ===================================================================================================================
 Route::controller(PeramalanController::class)->group(function () {
-    Route::get('peramalan/tahunan', 'tahunan')->name('peramalan.tahunan');
+    Route::get('peramalan/musiman', 'musiman')->name('peramalan.musiman')->middleware('auth');
+    Route::post('peramalan/musiman', 'musimanproses')->name('musiman.proses')->middleware('auth');
+    // Route::get('getYear/{target_tahun}', 'getYear')->name('getYear')->middleware('auth');
 
-    Route::get('peramalan/bulanan', 'bulanan')->name('peramalan.bulanan');
-    Route::post('peramalan/bulanan', 'bulananproses')->name('bulanan.proses');
+    Route::get('peramalan/tahunan', 'tahunan')->name('peramalan.tahunan')->middleware('auth');
+    Route::post('peramalan/tahunan', 'tahunanproses')->name('tahunan.proses')->middleware('auth');
+    Route::get('getYear/{target_tahun}', 'getYear')->name('getYear')->middleware('auth');
 
-    Route::get('peramalan/bulankhusus', 'bulankhusus')->name('peramalan.bulankhusus');
-    Route::post('peramalan/bulankhusus', 'submitBulanKhusus')->name('peramalan.inputbulankhusus');
+    Route::get('peramalan/bulanan', 'bulanan')->name('peramalan.bulanan')->middleware('auth');
+    Route::post('peramalan/bulanan', 'bulananproses')->name('bulanan.proses')->middleware('auth');
+    Route::get('getBulan/{target_bulan}', 'getBulan')->name('getBulan')->middleware('auth');
 
+    Route::get('peramalan/bulankhusus', 'bulankhusus')->name('peramalan.bulankhusus')->middleware('auth');
+    Route::post('peramalan/bulankhusus', 'bulankhususproses')->name('bulankhusus.proses')->middleware('auth');
+    Route::get('getTahun/{target_bulan}', 'getTahun')->name('getTahun')->middleware('auth');
 });
 
-
-// Route::get('peramalan/bulanan', function () {
-//     return view('peramalan.bulanan');
-// })->name('peramalan.bulanan');
-
-// Route::get('peramalan/bulankhusus', function () {
-//     return view('peramalan.bulankhusus');
-// })->name('peramalan.bulankhusus');
-
-// Konfirmasi Aktivitas ===========================================
+// Konfirmasi Aktivitas ========================================================================================================
 Route::get('/konfirmasiaktivitas', function () {
     return view('konfirmasiaktivitas.index');
-})->name('konfirmasiaktivitas.index');
+})->name('konfirmasiaktivitas.index')->middleware('role:Pemilik');
 
-// Log Aktivitas ===========================================
-Route::get('/logaktivitas', function () {
-    return view('logaktivitas.index');
-})->name('logaktivitas.index');
+// Estimasi ===============================================================================================================
+Route::get('estimasi', [PeramalanController::class, 'estimasi'])->name('estimasi.index')->middleware('auth');
+
+// Log Aktivitas ===============================================================================================================
+// Route::get('logaktivitas', [AuthController::class, 'log'])->name('logaktivitas.index')->middleware('role:Pemilik');
+
+// Auth::routes();
 

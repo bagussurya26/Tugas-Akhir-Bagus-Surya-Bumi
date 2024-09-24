@@ -2,51 +2,211 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Komposisi;
+use App\Models\ListKain;
+use App\Models\WarnaProduk;
 use Carbon\Carbon;
 use App\Models\Kain;
+use App\Models\User;
+use App\Models\Resep;
 use App\Models\Produk;
 use App\Models\Ukuran;
 use App\Models\Karyawan;
-use App\Models\NotaKain;
 use App\Models\Produksi;
-use App\Models\HasilProduk;
-use App\Models\RincianKain;
+use App\Models\UkuranProduk;
 use Illuminate\Http\Request;
-use App\Models\UkuranPakaian;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use App\Http\Requests\ProduksiCreateRequest;
 
 class ProduksiController extends Controller
 {
     public function index()
     {
-        $queryModel = Produksi::orderBy('created_at', 'desc')
-            ->get();
+        $produksis = Produksi::all();
 
         $title = 'Delete Data!';
         $text = "Are you sure you want to delete?";
         confirmDelete($title, $text);
 
-        return view('master.produksi.daftarproduksi', compact('queryModel'));
+        return view('master.produksi.daftarproduksi', compact('produksis'));
     }
 
-    public function laporanproduksi()
+    public function getProduksiKain($filter)
     {
-        $queryModel = Produksi::orderBy('created_at', 'desc')
+        $produksis = Produksi::join('list_kains', 'nota_produksis.id', '=', 'list_kains.nota_produksi_id')
+            ->join('komposisi', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->select('nota_produksis.*')
+            ->where('list_kains.kain_id', $filter)
             ->get();
 
-        return view('laporan.produksi', compact('queryModel'));
+        $kode_kain = Kain::where('id', $filter)->value('kode_kain');
+
+        $title = 'Delete Data!';
+        $text = "Are you sure you want to delete?";
+        confirmDelete($title, $text);
+
+        return view('master.produksi.daftarproduksikain', compact('produksis', 'kode_kain'));
+    }
+
+    public function getProduksiProduk($idproduk)
+    {
+        $produksis = Produksi::join('list_kains', 'nota_produksis.id', '=', 'list_kains.nota_produksi_id')
+            ->join('komposisi', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->join('produk_ukuran', 'produk_ukuran.id', '=', 'komposisi.produk_ukuran_id')
+            ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->where('produk_warna.produk_id', $idproduk)
+            ->groupBy('nota_produksis.id')
+            ->get();
+
+        $kode_produk = Produk::where('id', $idproduk)->value('kode_produk');
+
+        $title = 'Delete Data!';
+        $text = "Are you sure you want to delete?";
+        confirmDelete($title, $text);
+
+        return view('master.produksi.daftarproduksiproduk', compact('produksis', 'kode_produk'));
     }
 
     public function create()
     {
-        $ukurans = Ukuran::all();
+        $produkukurans = UkuranProduk::join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->select('produk_ukuran.*', 'ukurans.nama', 'produk_warna.warna')
+            ->get();
         $produks = Produk::all();
         $kains = Kain::all();
         $karyawans = Karyawan::all();
+        $produkwarnas = WarnaProduk::all();
+        $reseps = Resep::join('kains', 'reseps.kain_id', '=', 'kains.id')
+            ->join('produk_warna', 'reseps.produk_warna_id', '=', 'produk_warna.id')
+            ->join('produk_ukuran', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+            ->select('reseps.tipe', 'reseps.kain_id', 'produk_ukuran.id', 'kains.kode_kain')
+            ->get();
+        $produksis = Produksi::all();
 
-        return view('master.produksi.insertproduksi', compact('ukurans', 'produks', 'kains', 'karyawans'));
+        return view('master.produksi.insertproduksi', compact('produkukurans', 'produks', 'kains', 'karyawans', 'produkwarnas', 'reseps', 'produksis'));
+    }
+
+    public function getWarnaProduk($id)
+    {
+        $warnaproduk = WarnaProduk::where('produk_id', $id)
+            ->get();
+
+        return response()->json($warnaproduk);
+    }
+
+    public function getAvgQty($produk_ukuran_id)
+    {
+        $idproduk = WarnaProduk::join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->where('produk_ukuran.id', $produk_ukuran_id)
+            ->value('produk_id');
+
+        $idukuran = UkuranProduk::join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->where('produk_ukuran.id', $produk_ukuran_id)
+            ->value('ukurans.id');
+
+        $cekkomposisi = Komposisi::join('produk_ukuran', 'produk_ukuran.id', '=', 'komposisi.produk_ukuran_id')
+            ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->where('produk_warna.produk_id', $idproduk)
+            ->where('produk_ukuran.ukuran_id', $idukuran)
+            ->first();
+
+        $lebarkain = Resep::join('produk_warna', 'produk_warna.id', '=', 'reseps.produk_warna_id')
+            ->join('kains', 'kains.id', '=', 'reseps.kain_id')
+            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->where('produk_ukuran.id', $produk_ukuran_id)
+            ->where('reseps.tipe', 'UTAMA')
+            ->value('lebar');
+
+        $ukuran = Ukuran::join('produk_ukuran', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->where('produk_ukuran.id', $produk_ukuran_id)
+            ->value('nama');
+
+        $produks = Produk::join('produk_warna', 'produks.id', '=', 'produk_warna.produk_id')
+            ->join('produk_ukuran', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->where('produk_ukuran.id', $produk_ukuran_id)
+            ->first();
+
+        if ($cekkomposisi == null) {
+
+            if ($lebarkain >= 1.15 && $lebarkain < 1.5) {
+                if ($produks->tipe_lengan == 'PENDEK') {
+                    if ($ukuran == 'M' || $ukuran == 'L' || $ukuran == 'XL') {
+                        $AvgQty = 1.75;
+                    } elseif ($ukuran == '2XL') {
+                        $AvgQty = 2;
+                    } elseif ($ukuran == '3XL') {
+                        $AvgQty = 2.25;
+                    } else {
+                        $AvgQty = 2.5;
+                    }
+                } else {
+                    if ($ukuran == 'M' || $ukuran == 'L' || $ukuran == 'XL') {
+                        $AvgQty = 2;
+                    } elseif ($ukuran == '2XL') {
+                        $AvgQty = 2.25;
+                    } elseif ($ukuran == '3XL') {
+                        $AvgQty = 2.5;
+                    } else {
+                        $AvgQty = 2.75;
+                    }
+                }
+            } else {
+                if ($produks->tipe_lengan == 'PENDEK') {
+                    if ($ukuran == 'M' || $ukuran == 'L' || $ukuran == 'XL') {
+                        $AvgQty = 1.25;
+                    } elseif ($ukuran == '2XL') {
+                        $AvgQty = 1.5;
+                    } elseif ($ukuran == '3XL') {
+                        $AvgQty = 1.75;
+                    } else {
+                        $AvgQty = 2;
+                    }
+                } else {
+                    if ($ukuran == 'M' || $ukuran == 'L' || $ukuran == 'XL') {
+                        $AvgQty = 1.5;
+                    } elseif ($ukuran == '2XL') {
+                        $AvgQty = 1.75;
+                    } elseif ($ukuran == '3XL') {
+                        $AvgQty = 2;
+                    } else {
+                        $AvgQty = 2.25;
+                    }
+                }
+
+            }
+
+        } else {
+
+            $komposisi = Komposisi::join('produk_ukuran', 'produk_ukuran.id', '=', 'komposisi.produk_ukuran_id')
+                ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+                ->where('produk_warna.produk_id', $idproduk)
+                ->where('produk_ukuran.ukuran_id', $idukuran)
+                ->get();
+
+            $sumQtyProduk = 0;
+            $sumQtyKain = 0;
+
+            foreach ($komposisi as $value) {
+
+                $sumQtyProduk += $value['qty_produk'];
+                $sumQtyKain += $value['qty_kain'];
+            }
+
+            $AvgQty = Round($sumQtyKain / $sumQtyProduk, 2);
+        }
+
+        return response()->json(['avgQty' => $AvgQty, 'ukuran' => $ukuran]);
+    }
+
+    public function getUkuranProduk($id)
+    {
+        $ukuranproduk = UkuranProduk::join('ukurans', 'produk_ukuran.ukuran_id', '=', 'ukurans.id')
+            ->select('ukurans.nama', 'produk_ukuran.*')
+            ->where('produk_ukuran.produk_warna_id', $id)
+            ->get();
+
+        // dd($ukuranproduk);
+        return response()->json($ukuranproduk);
     }
 
     public function store(Request $request)
@@ -55,502 +215,228 @@ class ProduksiController extends Controller
 
         try {
 
-            $validatedData = $request->validate([
-                'id' => 'required|unique:nota_produksis,id,',
-                'tanggal_mulai' => 'required',
-                // 'dataNota.*.id-nota' => 'required|unique:nota_kains,id,',
-                // 'dataNota.*.id-kain' => 'required',
-                // 'dataNota.*.qty-kain' => 'required',
-                // 'dataNota.*.tgl-mulai' => 'required',
-                // 'dataNota.*.karyawan' => 'required',
-                // 'dataTarget.*.id-produk' => 'required',
-                // 'dataTarget.*.ukuran' => 'required',
-                // 'dataTarget.*.qty-pakaian' => 'required',
-            ], [
-                'id.required' => 'Wajib diisi!',
-                'id.unique' => 'Kode Produksi sudah ada',
-                'tanggal_mulai.required' => 'Wajib diisi!',
-                // 'dataNota.*.id-nota.required' => 'Wajib diisi!',
-                // 'dataNota.*.id-nota.unique' => 'Kode Nota Potong sudah ada',
-                // 'dataNota.*.id-kain.required' => 'Wajib diisi!',
-                // 'dataNota.*.qty-kain.required' => 'Wajib diisi!',
-                // 'dataNota.*.tgl-mulai.required' => 'Wajib diisi!',
-                // 'dataNota.*.karyawan.required' => 'Wajib diisi!',
-                // 'dataTarget.*.id-produk.required' => 'Wajib diisi!',
-                // 'dataTarget.*.ukuran.required' => 'Wajib diisi!',
-                // 'dataTarget.*.qty-pakaian.required' => 'Wajib diisi!',
+            $produksi = Produksi::create([
+                'karyawan_id' => $request->input('karyawan_id'),
+                'kode_produksi' => $request->input('kode-produksi'),
+                'tgl_mulai' => now(),
+                'status' => "Dalam Proses",
+                'keterangan' => $request->input('keterangan'),
+                'created_by' => auth()->user()->id,
+                'updated_by' => auth()->user()->id,
             ]);
 
-            //TANGGAL PRODUKSI
-            $tgl_mulai_produksi = $validatedData['tanggal_mulai'];
-            $tgl_selesai_produksi = $request->input('tanggal_selesai');
+            // $properti = [];
+            // $propertistok = [];
+            // $nomortarget = 1;
+            // $nomorstok = 1;
 
-            //change to timestamp format Y-m-d H:i:s
-            $tgl_mulai_produksi_format = Carbon::createFromTimestamp(strtotime($tgl_mulai_produksi))->format('Y-m-d H:i:s');
-            $tgl_selesai_produksi_format = "";
+            // $properti[] = 'karyawan : ' . Karyawan::where('id', $produksi->karyawan_id)->value('nama');
+            // $properti[] = 'kode_produksi : ' . $produksi->kode_produksi;
+            // $properti[] = 'tgl_mulai : ' . $produksi->tgl_mulai;
+            // $properti[] = 'status : ' . $produksi->status;
+            // $properti[] = 'keterangan : ' . $produksi->keterangan;
+            // $properti[] = ' ';
+            // $properti[] = '== TARGET PRODUK ==';
 
-            if ($tgl_selesai_produksi == null) {
-                $status_produksi = "Dalam Proses";
-                $tgl_selesai_produksi_format = null;
-            } else {
-                $status_produksi = "Selesai";
-                $tgl_selesai_produksi_format = Carbon::createFromTimestamp(strtotime($tgl_selesai_produksi))->format('Y-m-d H:i:s');
-            }
+            $dataTarget = $request->input('dataTarget');
+            $dataKain = $request->input('dataKain');
 
-            //INPUT KE TABEL nota_produksis
-            $DataProduksi = [
-                'id' => $validatedData['id'],
-                'tgl_mulai' => $tgl_mulai_produksi_format,
-                'tgl_selesai' => $tgl_selesai_produksi_format,
-                'status' => $status_produksi,
-                'keterangan' => $request->input('keterangan-produksi'),
-                'created_by' => 1, //NUNGGU HAK AKSES
-                'updated_by' => 1, //NUNGGU HAK AKSES
-            ];
+            // dd($dataTarget, $dataKain);
 
-            $ProduksiTabel = Produksi::create($DataProduksi);
+            // KAIN
+            foreach ($dataKain as $produk_ukuran_id => $data) {
 
-            $dataTargetToInsert = $request->input('dataTarget');
-            $dataNotaToInsert = $request->input('dataNota');
+                // dd($dataTarget[$produk_ukuran_id]);
 
-            // $formattedDataNota = [];
-            // $formattedDataRincianKain = [];
-            // $formattedDataTarget = [];
+                foreach ($data as $kain_id => $estimQty) {
 
-            if ($ProduksiTabel) {
+                    $ceklistkain = ListKain::where('nota_produksi_id', $produksi->id)
+                        ->where('kain_id', $kain_id)
+                        ->first();
 
-                foreach ($dataNotaToInsert as $data) {
-
-                    //TANGGAL NOTA POTONG KAIN
-                    $tgl_mulai_nota_potong = $data['tgl-mulai'];
-                    $tgl_selesai_nota_potong = $data['tgl-selesai'];
-
-                    //change to timestamp format Y-m-d H:i:s
-                    $tgl_mulai_nota_potong_format = Carbon::createFromTimestamp(strtotime($tgl_mulai_nota_potong))->format('Y-m-d H:i:s');
-                    $tgl_selesai_nota_potong_format = "";
-
-                    if ($tgl_selesai_nota_potong == null) {
-                        $status_potong = "Dalam Proses";
-                        $tgl_selesai_nota_potong_format = null;
+                    if ($ceklistkain == null) {
+                        ListKain::create([
+                            'nota_produksi_id' => $produksi->id,
+                            'kain_id' => $kain_id,
+                            'qty_kain_total' => $estimQty,
+                        ]);
                     } else {
-                        $status_potong = "Selesai";
-                        $tgl_selesai_nota_potong_format = Carbon::createFromTimestamp(strtotime($tgl_selesai_nota_potong))->format('Y-m-d H:i:s');
+                        ListKain::find($ceklistkain->id)
+                            ->increment('qty_kain_total', $estimQty);
                     }
 
-                    // $formattedDataNota[] = [
-                    //     'nota_produksis_id' => $ProduksiTabel->id,
-                    //     'karyawans_id' => $data['karyawan'],
-                    //     'id' => $data['id-nota'],
-                    //     'tgl_mulai' => $tgl_mulai_nota_potong_format,
-                    //     'tgl_selesai' => $tgl_selesai_nota_potong_format,
-                    //     'status' => $status_potong,
-                    // ];
+                    $idlistkain = ListKain::where('nota_produksi_id', $produksi->id)
+                        ->where('kain_id', $kain_id)
+                        ->value('id');
 
-                    NotaKain::insertOrIgnore([
-                        'nota_produksis_id' => $ProduksiTabel->id,
-                        'karyawans_id' => $data['karyawan'],
-                        'id' => $data['id-nota'],
-                        'tgl_mulai' => $tgl_mulai_nota_potong_format,
-                        'tgl_selesai' => $tgl_selesai_nota_potong_format,
-                        'status' => $status_potong,
+                    Komposisi::create([
+                        'list_kain_id' => $idlistkain,
+                        'produk_ukuran_id' => $produk_ukuran_id,
+                        'qty_kain' => $estimQty,
+                        'qty_produk' => $dataTarget[$produk_ukuran_id],
                     ]);
 
-                    //INPUT KE TABEL rincian_kains
-                    // $formattedDataRincianKain[] = [
-                    //     'nota_kains_id' => $data['id-nota'],
-                    //     'nota_kains_nota_produksis_id' => $ProduksiTabel->id,
-                    //     'kains_id' => $data['id-kain'],
-                    //     'qty_kain' => $data['qty-kain'],
-                    // ];
+                    Kain::where('id', $kain_id)
+                        ->decrement('stok', $estimQty);
 
-                    RincianKain::insert([
-                        'nota_kains_id' => $data['id-nota'],
-                        'nota_kains_nota_produksis_id' => $ProduksiTabel->id,
-                        'kains_id' => $data['id-kain'],
-                        'qty_kain' => $data['qty-kain'],
-                    ]);
-
-                    //Update stok kain
-                    $stokKain = Kain::select('stok')
-                        ->where('id', $data['id-kain'])
-                        ->value('stok');
-
-                    $stokKain -= $data['qty-kain'];
-
-                    Kain::where('id', $data['id-kain'])
-                        ->update([
-                            'stok' => $stokKain,
-                        ]);
+                    UkuranProduk::where('id', $produk_ukuran_id)
+                        ->increment('incoming_stok', $dataTarget[$produk_ukuran_id]);
                 }
-
-                foreach ($dataTargetToInsert as $data) {
-
-                    //Update stok tabel ukuran_pakaians
-                    //cek datanya dulu pada tabel ada datanya atau tidak
-                    // $ukuranPakaian = UkuranPakaian::where('pakaians_id', $data['id-produk'])
-                    //     ->where('ukurans_id', $data['ukuran'])
-                    //     ->first();
-
-                    // if ($ukuranPakaian == null) {
-
-                    //Insert awal tabel ukuran_pakaians
-                    // DB::table('ukuran_pakaians')
-                    //     ->insert([
-                    //         'pakaians_id' => $data['id-produk'],
-                    //         'ukurans_id' => $data['ukuran'],
-                    //         'incoming_stok' => $data['qty-pakaian'],
-                    //     ]);
-
-                    DB::table('ukuran_pakaians')
-                        ->updateOrInsert(
-                            [
-                                'pakaians_id' => $data['id-produk'],
-                                'ukurans_id' => $data['ukuran'],
-                            ],
-                            [
-                                'incoming_stok' => $data['qty-pakaian'],
-                            ]
-                        );
-
-                    // $formattedDataTarget[] = [
-                    //     'nota_produksis_id' => $ProduksiTabel->id,
-                    //     'ukuran_pakaians_pakaians_id' => $data['id-produk'],
-                    //     'ukuran_pakaians_ukurans_id' => $data['ukuran'],
-                    //     'qty_pakaian' => $data['qty-pakaian'],
-                    // ];
-
-                    HasilProduk::insertOrIgnore([
-                        'nota_produksis_id' => $ProduksiTabel->id,
-                        'ukuran_pakaians_pakaians_id' => $data['id-produk'],
-                        'ukuran_pakaians_ukurans_id' => $data['ukuran'],
-                        'qty_pakaian' => $data['qty-pakaian'],
-                    ]);
-
-                    //Update stok pakaians
-                    $stokIncomingProduk = Produk::select('incoming_stok')
-                        ->where('id', $data['id-produk'])
-                        ->value('incoming_stok');
-
-                    $stokIncomingProduk += $data['qty-pakaian'];
-
-                    // dd($stokIncomingProduk);
-
-                    Produk::where('id', $data['id-produk'])
-                        ->update([
-                            'incoming_stok' => $stokIncomingProduk,
-                        ]);
-
-                    // } else {
-
-                    // $formattedDataTarget[] = [
-                    //     'nota_produksis_id' => $ProduksiTabel->id,
-                    //     'ukuran_pakaians_pakaians_id' => $data['id-produk'],
-                    //     'ukuran_pakaians_ukurans_id' => $data['ukuran'],
-                    //     'qty_pakaian' => $data['qty-pakaian'],
-                    // ];
-
-                    // HasilProduk::insert([
-                    //     'nota_produksis_id' => $ProduksiTabel->id,
-                    //     'ukuran_pakaians_pakaians_id' => $data['id-produk'],
-                    //     'ukuran_pakaians_ukurans_id' => $data['ukuran'],
-                    //     'qty_pakaian' => $data['qty-pakaian'],
-                    // ]);
-
-                    // //Update incoming stok tabel ukuran_pakaians
-                    // DB::table('ukuran_pakaians')
-                    //     ->where('pakaians_id', $data['id-produk'])
-                    //     ->where('ukurans_id', $data['ukuran'])
-                    //     ->update([
-                    //         'incoming_stok' => $data['qty-pakaian'],
-                    //     ]);
-                    // }
-                }
-
-                // $notaKain = NotaKain::insertOrIgnore($formattedDataNota);
-                // $hasilPakaian = HasilProduk::insertOrIgnore($formattedDataTarget);
-
-                // Jika insert ke tabel rincian_kains berhasil
-                // if ($notaKain) {
-
-                //     $rincianKain = RincianKain::insert($formattedDataRincianKain);
-
-                //     if ($rincianKain) {
-                //         // Maka lakukan update stok masing-masing kain
-                //         foreach ($dataNotaToInsert as $data) {
-                //             //Update stok kain
-                //             $stokKain = Kain::select('stok')
-                //                 ->where('id', $data['id-kain'])
-                //                 ->value('stok');
-
-                //             $stokKain -= $data['qty-kain'];
-
-                //             DB::table('kains')
-                //                 ->where('id', $data['id-kain'])
-                //                 ->update([
-                //                     'stok' => $stokKain,
-                //                 ]);
-                //         }
-                //     }
-                // }
-
-                // Jika insert ke tabel hasil_pakaians berhasil
-                // if ($hasilPakaian) {
-
-                //     // Maka lakukan update incoming_stok masing-masing produk
-                //     foreach ($dataTargetToInsert as $data) {
-                //         //Update stok kain
-                //         $stokIncomingProduk = Produk::select('incoming_stok')
-                //             ->where('id', $data['id-produk'])
-                //             ->value('incoming_stok');
-
-                //         $stokIncomingProduk += $data['qty-pakaian'];
-
-                //         // dd($stokIncomingProduk);
-
-                //         DB::table('pakaians')
-                //             ->where('id', $data['id-produk'])
-                //             ->update([
-                //                 'incoming_stok' => $stokIncomingProduk,
-                //             ]);
-                //     }
-                // }
             }
+
 
             DB::commit();
 
             toast('Penambahan data berhasil!', 'success');
-            return redirect()->route('produksi.create');
+            return redirect()->route('produksi.index');
 
 
         } catch (\Exception $e) {
-            // An error occurred, rollback the transaction
             DB::rollback();
 
+            echo ($e);
+
             toast('Penambahan data gagal!', 'warning');
-            return redirect()->route('produksi.create');
+            // return redirect()->route('produksi.create')->withInput();
         }
 
     }
 
     public function show($id)
     {
-        $infoProduksi = Produksi::where('nota_produksis.id', $id)
-            ->get();
+        $produksis = Produksi::find($id);
 
-        $detailTarget = HasilProduk::join('ukurans', 'ukurans.id', '=', 'hasil_pakaians.ukuran_pakaians_ukurans_id')
-            ->join('pakaians', 'pakaians.id', '=', 'hasil_pakaians.ukuran_pakaians_pakaians_id')
-            ->select('hasil_pakaians.ukuran_pakaians_pakaians_id as id_produk', 'pakaians.nama', 'ukurans.ukuran', 'hasil_pakaians.qty_pakaian')
-            ->where('hasil_pakaians.nota_produksis_id', $id)
-            // ->groupBy('hasil_pakaians.ukuran_pakaians_pakaians_id')
-            ->orderBy('hasil_pakaians.ukuran_pakaians_pakaians_id', 'asc')
-            ->get();
+        $title = 'Konfirmasi Selesai Potong Kain';
+        $text = "Apakah anda yakin ingin mengkonfimasi?";
+        confirmDelete($title, $text);
 
-        $detailNotaKain = Karyawan::join('nota_kains', 'nota_kains.karyawans_id', '=', 'karyawans.id')
-            ->join('rincian_kains', 'rincian_kains.nota_kains_id', '=', 'nota_kains.id')
-            ->select('nota_kains.id as nota_kain_id', 'nota_kains.tgl_mulai', 'nota_kains.tgl_selesai', 'nota_kains.status', 'rincian_kains.*', 'karyawans.nama')
-            ->where('nota_kains.nota_produksis_id', $id)
-            ->get();
-
-        // dd($detailNotaKain);
-
-
-        return view('master.produksi.detailproduksi', compact('infoProduksi', 'detailTarget', 'detailNotaKain'));
-    }
-
-    public function edit($id)
-    {
-        $ukurans = Ukuran::all();
         $produks = Produk::all();
-        $kains = Kain::all();
-        $karyawans = Karyawan::all();
+        $reseps = Resep::join('kains', 'reseps.kain_id', '=', 'kains.id')->get();
+        $ukurans = Ukuran::all();
 
-        $infoProduksi = Produksi::where('nota_produksis.id', $id)
+        $produkwarnas = WarnaProduk::join('produk_ukuran', 'produk_ukuran.produk_warna_id', '=', 'produk_warna.id')
+            ->join('komposisi', 'komposisi.produk_ukuran_id', '=', 'produk_ukuran.id')
+            ->join('list_kains', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->select('produk_warna.*')
+            ->where('list_kains.nota_produksi_id', $id)
+            ->groupBy('produk_warna.warna')
             ->get();
 
-        $detailTarget = HasilProduk::join('ukurans', 'ukurans.id', '=', 'hasil_pakaians.ukuran_pakaians_ukurans_id')
-            ->join('pakaians', 'pakaians.id', '=', 'hasil_pakaians.ukuran_pakaians_pakaians_id')
-            ->select('hasil_pakaians.ukuran_pakaians_pakaians_id as id_produk', 'pakaians.nama', 'ukurans.ukuran', 'ukurans.id as id_ukuran', 'hasil_pakaians.qty_pakaian')
-            ->where('hasil_pakaians.nota_produksis_id', $id)
-            ->orderBy('hasil_pakaians.ukuran_pakaians_pakaians_id', 'asc')
+        $targetProduks = Komposisi::join('list_kains', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->join('produk_ukuran', 'produk_ukuran.id', '=', 'komposisi.produk_ukuran_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+            ->join('reseps', 'reseps.produk_warna_id', '=', 'produk_warna.id')
+            ->join('kains', 'reseps.kain_id', '=', 'kains.id')
+            ->select('produks.kode_produk', 'produk_warna.*', 'ukurans.nama as nama_ukuran', 'komposisi.*', 'ukurans.id as ukuran_id', 'kains.kode_kain')
+            ->where('list_kains.nota_produksi_id', $id)
+            ->where('reseps.tipe', 'UTAMA')
             ->get();
 
-        $detailNotaKain = Karyawan::join('nota_kains', 'nota_kains.karyawans_id', '=', 'karyawans.id')
-            ->join('rincian_kains', 'rincian_kains.nota_kains_id', '=', 'nota_kains.id')
-            ->select('nota_kains.id as nota_kain_id', 'nota_kains.tgl_mulai', 'nota_kains.tgl_selesai', 'rincian_kains.*', 'karyawans.nama as nama_karyawan', 'karyawans.id as id_karyawan')
-            ->where('nota_kains.nota_produksis_id', $id)
+        $penggunaankains = Komposisi::join('list_kains', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->join('kains', 'list_kains.kain_id', '=', 'kains.id')
+            ->select('list_kains.*', 'kains.kode_kain', 'komposisi.*')
+            ->where('list_kains.nota_produksi_id', $id)
             ->get();
 
-
-        return view('master.produksi.editproduksi', compact('infoProduksi', 'detailTarget', 'detailNotaKain', 'ukurans', 'produks', 'kains', 'karyawans'));
+        return view('master.produksi.detailproduksi', compact('produksis', 'targetProduks', 'penggunaankains', 'produkwarnas', 'produks', 'reseps', 'ukurans'));
     }
+
+
+    public function updateKeterangan(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+
+            Produksi::find($id)
+                ->update([
+                    'keterangan' => $request->input('keterangan'),
+                ]);
+
+
+            DB::commit();
+
+            toast('Memperbarui keterangan berhasil!', 'success');
+            return redirect()->route('produksi.show', $id);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            echo ($e);
+
+            toast('Memperbarui keterangan gagal!', 'warning');
+            // return redirect()->route('produksi.edit', $id);
+        }
+    }
+
 
     public function update(Request $request, $id)
     {
         DB::beginTransaction();
 
         try {
-            //TANGGAL PRODUKSI
-            $tgl_selesai_produksi = $request->input('tanggal_selesai');
-
-            //change to timestamp format Y-m-d H:i:s
-            $tgl_selesai_produksi_format = "";
-
-            if ($tgl_selesai_produksi == null) {
-                $status_produksi = "Dalam Proses";
-                $tgl_selesai_produksi_format = null;
-            } else {
-                $status_produksi = "Selesai";
-                $tgl_selesai_produksi_format = Carbon::createFromTimestamp(strtotime($tgl_selesai_produksi))->format('Y-m-d H:i:s');
-            }
-
-            $dataTargetToInsert = $request->input('dataTarget');
-            $dataNotaToInsert = $request->input('dataNota');
-
-            Produksi::where('id', $id)
+            // UPDATE PRODUKSI
+            Produksi::find($id)
                 ->update([
-                    'tgl_selesai' => $tgl_selesai_produksi_format,
-                    'status' => $status_produksi,
-                    'keterangan' => $request->input('keterangan-produksi'),
-                    'updated_by' => 2, // NUNGGU HAK AKSES
+                    'tgl_selesai' => now(),
+                    'status' => 'Selesai',
+                    'keterangan' => $request->input('keterangan'),
+                    'updated_by' => auth()->user()->id,
                 ]);
 
 
-            foreach ($dataNotaToInsert as $data) {
+            // UPDATE RINCIAN
+            $dataTarget = $request->input('dataTarget');
 
-                //TANGGAL NOTA POTONG KAIN
-                $tgl_selesai_nota_potong = $data['tgl-selesai'];
+            foreach ($dataTarget as $list_kain_id => $data) {
 
-                //change to timestamp format Y-m-d H:i:s
-                $tgl_selesai_nota_potong_format = "";
+                foreach ($data as $produk_ukuran_id => $qty_produk) {
 
-                if ($tgl_selesai_nota_potong == null) {
-                    $status_potong = "Dalam Proses";
-                    $tgl_selesai_nota_potong_format = null;
-                } else {
-                    $status_potong = "Selesai";
-                    $tgl_selesai_nota_potong_format = Carbon::createFromTimestamp(strtotime($tgl_selesai_nota_potong))->format('Y-m-d H:i:s');
-                }
-
-                NotaKain::where('nota_produksis_id', $id)
-                    ->where('id', $data['id-nota'])
-                    ->update([
-                        'tgl_selesai' => $tgl_selesai_nota_potong_format,
-                        'status' => $status_potong,
-                    ]);
-            }
-
-            $stok = 0;
-            $array = [];
-
-            foreach ($dataTargetToInsert as $data) {
-
-                $array[] = [
-                    'id-produk' => $data['id-produk'],
-                    'qty-produk' => $data['qty-pakaian'],
-                ];
-
-                // dd($dataTargetToInsert);
-
-                HasilProduk::where('nota_produksis_id', $id)
-                    ->where('ukuran_pakaians_pakaians_id', $data['id-produk'])
-                    ->where('ukuran_pakaians_ukurans_id', $data['id-ukuran'])
-                    ->update([
-                        'qty_pakaian' => $data['qty-pakaian'],
-                    ]);
-
-                UkuranPakaian::where('pakaians_id', $data['id-produk'])
-                    ->where('ukurans_id', $data['id-ukuran'])
-                    ->update([
-                        'incoming_stok' => $data['qty-pakaian'],
-                    ]);
+                    $qtyproduksebelum = Komposisi::where('produk_ukuran_id', $produk_ukuran_id)
+                        ->where('list_kain_id', $list_kain_id)
+                        ->value('qty_produk');
 
 
-                Produk::where('id', $data['id-produk'])
-                    ->update([
-                        'incoming_stok' => 0,
-                    ]);
+                    ListKain::find($list_kain_id)
+                        ->decrement('qty_kain_total', $qtyproduksebelum);
 
-            }
-
-            // dd($array);
-
-            foreach ($array as $data) {
-                // Update stok pakaians
-                $stokIncomingProduk = Produk::select('incoming_stok')
-                    ->where('id', $data['id-produk'])
-                    ->value('incoming_stok');
-
-                $stokIncomingProduk += $data['qty-produk'];
+                    ListKain::find($list_kain_id)
+                        ->increment('qty_kain_total', $qty_produk);
 
 
-                Produk::where('id', $data['id-produk'])
-                    ->update([
-                        'incoming_stok' => $stokIncomingProduk,
-                    ]);
-            }
+
+                    Komposisi::where('list_kain_id', $list_kain_id)
+                        ->where('produk_ukuran_id', $produk_ukuran_id)
+                        ->decrement('qty_produk', $qtyproduksebelum);
+
+                    Komposisi::where('list_kain_id', $list_kain_id)
+                        ->where('produk_ukuran_id', $produk_ukuran_id)
+                        ->increment('qty_produk', $qty_produk);
 
 
-            if ($tgl_selesai_produksi != null) {
+                    UkuranProduk::find($produk_ukuran_id)
+                        ->decrement('incoming_stok', $qtyproduksebelum);
 
-                foreach ($dataTargetToInsert as $data) {
+                    UkuranProduk::find($produk_ukuran_id)
+                        ->increment('stok', $qty_produk);
 
-                    // Pindah incoming_stok ke stok asli tabel ukuran_pakaians
-                    DB::table('ukuran_pakaians')
-                        ->where('pakaians_id', $data['id-produk'])
-                        ->where('ukurans_id', $data['id-ukuran'])
-                        ->update([
-                            'incoming_stok' => 0,
-                        ]);
-
-                    //Update total stok tabel ukuran_pakaians
-                    $stokUkuranPakaian = UkuranPakaian::select('qty')
-                        ->where('pakaians_id', $data['id-produk'])
-                        ->where('ukurans_id', $data['id-ukuran'])
-                        ->value('qty');
-
-                    $stokUkuranPakaian += $data['qty-pakaian'];
-
-                    DB::table('ukuran_pakaians')
-                        ->where('pakaians_id', $data['id-produk'])
-                        ->where('ukurans_id', $data['id-ukuran'])
-                        ->update([
-                            'qty' => $stokUkuranPakaian,
-                        ]);
-
-                    // Pindah incoming_stok ke stok asli tabel pakaians
-                    DB::table('pakaians')
-                        ->where('id', $data['id-produk'])
-                        ->update([
-                            'incoming_stok' => 0,
-                        ]);
-
-                    //Update total stok tabel pakaian
-                    $stokPakaian = Produk::select('total_qty')
-                        ->where('id', $data['id-produk'])
-                        ->value('total_qty');
-
-                    $stokPakaian += $data['qty-pakaian'];
-
-                    DB::table('pakaians')
-                        ->where('id', $data['id-produk'])
-                        ->update([
-                            'total_qty' => $stokPakaian,
-                        ]);
                 }
             }
-
 
             DB::commit();
 
             toast('Perubahan data berhasil!', 'success');
-            return redirect()->route('produksi.edit', $id);
+            return redirect()->route('produksi.show', $id);
 
         } catch (\Exception $e) {
-            // dd($e);
             DB::rollback();
 
+            echo ($e);
+
             toast('Perubahan data gagal!', 'warning');
-            return redirect()->route('produksi.edit', $id);
+            // return redirect()->route('produksi.show', $id);
         }
     }
 
@@ -558,74 +444,31 @@ class ProduksiController extends Controller
     {
         DB::beginTransaction();
 
+        // $produksi = Produksi::find($id);
+
         try {
-            // ===========================================================================
-            // Update stok kain
-            $listRincianKain = RincianKain::where('nota_kains_nota_produksis_id', $id)
+
+            $listKomposisi = ListKain::join('komposisi', 'list_kains.id', '=', 'komposisi.list_kain_id')
+                ->where('list_kains.nota_produksi_id', $id)
                 ->get();
 
-            foreach ($listRincianKain as $data) {
-                $stokKain = Kain::where('id', $data['kains_id'])
-                    ->value('stok');
+            foreach ($listKomposisi as $data) {
 
-                $stokKain += $data['qty_kain'];
+                Kain::find($data->kain_id)
+                    ->increment('stok', $data->qty_kain);
 
-                Kain::where('id', $data['kains_id'])
-                    ->update([
-                        'stok' => $stokKain,
-                    ]);
+                UkuranProduk::find($data->produk_ukuran_id)
+                    ->decrement('incoming_stok', $data->qty_produk);
+
+                Komposisi::where('list_kain_id', $data->list_kain_id)
+                    ->where('produk_ukuran_id', $data->produk_ukuran_id)
+                    ->delete();
             }
 
-            // =========================================================
-            // Update incoming_stok dari ukuran_pakaian dan pakaian
+            ListKain::where('nota_produksi_id', $id)->delete();
 
-            $listHasilPakaian = HasilProduk::where('nota_produksis_id', $id)
-                ->get();
+            Produksi::find($id)->delete();
 
-            foreach ($listHasilPakaian as $data) {
-                // Update incoming_stok ukuran_pakaians
-                $incomingUkuranPakaian = UkuranPakaian::where('pakaians_id', $data['ukuran_pakaians_pakaians_id'])
-                    ->where('ukurans_id', $data['ukuran_pakaians_ukurans_id'])
-                    ->value('incoming_stok');
-
-                $incomingUkuranPakaian -= $data['qty_pakaian'];
-
-                UkuranPakaian::where('pakaians_id', $data['ukuran_pakaians_pakaians_id'])
-                    ->where('ukurans_id', $data['ukuran_pakaians_ukurans_id'])
-                    ->update([
-                        'incoming_stok' => $incomingUkuranPakaian,
-                    ]);
-
-                // Update incoming_stok pakaians
-                $incomingPakaian = Produk::where('id', $data['ukuran_pakaians_pakaians_id'])
-                    ->value('incoming_stok');
-
-                $incomingPakaian -= $data['qty_pakaian'];
-
-                Produk::where('id', $data['ukuran_pakaians_pakaians_id'])
-                    ->update([
-                        'incoming_stok' => $incomingPakaian,
-                    ]);
-            }
-
-            // Menghapus tabel yang berhubungan dengan produksi
-            DB::statement('SET foreign_key_checks=0;');
-            Produksi::where('id', $id)->delete();
-            // DB::statement('SET foreign_key_checks=1;');
-
-            // DB::statement('SET foreign_key_checks=0;');
-            NotaKain::where('nota_produksis_id', $id)->delete();
-            // DB::statement('SET foreign_key_checks=1;');
-
-            // DB::statement('SET foreign_key_checks=0;');
-            RincianKain::where('nota_kains_nota_produksis_id', $id)->delete();
-            // DB::statement('SET foreign_key_checks=1;');
-
-            // DB::statement('SET foreign_key_checks=0;');
-            HasilProduk::where('nota_produksis_id', $id)->delete();
-            DB::statement('SET foreign_key_checks=1;');
-
-            
 
             DB::commit();
             alert()->success('Hore!', 'Data Deleted Successfully');
@@ -635,8 +478,36 @@ class ProduksiController extends Controller
 
             DB::rollBack();
 
+            echo ($e);
+
             alert()->error('Yahhh..', 'Menghapus data tidak berhasil!');
-            return redirect()->route('produksi.index');
+            // return redirect()->route('produksi.index');
         }
+    }
+
+    public function laporanproduksi()
+    {
+        $produksis = Produksi::join('list_kains', 'nota_produksis.id', '=', 'list_kains.nota_produksi_id')
+            ->join('komposisi', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->join('produk_ukuran', 'produk_ukuran.id', '=', 'komposisi.produk_ukuran_id')
+            ->join('ukurans', 'ukurans.id', '=', 'produk_ukuran.ukuran_id')
+            ->join('produk_warna', 'produk_warna.id', '=', 'produk_ukuran.produk_warna_id')
+            ->join('produks', 'produks.id', '=', 'produk_warna.produk_id')
+            ->select('produks.kode_produk', 'ukurans.nama', 'produk_warna.warna', 'komposisi.qty_produk', 'nota_produksis.*')
+            ->get();
+
+        return view('laporan.produksi', compact('produksis'));
+    }
+
+    public function laporanpenggunaankain()
+    {
+        $penggunaankains = Komposisi::join('list_kains', 'list_kains.id', '=', 'komposisi.list_kain_id')
+            ->join('kains', 'kains.id', '=', 'list_kains.kain_id')
+            ->join('nota_produksis', 'list_kains.nota_produksi_id', '=', 'nota_produksis.id')
+            ->join('karyawans', 'karyawans.id', '=', 'nota_produksis.karyawan_id')
+            ->select('kains.kode_kain', 'komposisi.*', 'nota_produksis.*', 'karyawans.nama')
+            ->get();
+
+        return view('laporan.penggunaankain', compact('penggunaankains'));
     }
 }

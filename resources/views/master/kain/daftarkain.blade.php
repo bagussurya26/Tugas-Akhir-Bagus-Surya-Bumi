@@ -2,7 +2,7 @@
 
 @section('title', 'Daftar Kain')
 
-@section('cssdaftarkain')
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
@@ -13,14 +13,9 @@
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/dt-global_style.css') }}">
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/custom_dt_custom.css') }}">
-
-
-<link href="{{ asset('assets/src/assets/css/light/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-<link href="{{ asset('assets/src/assets/css/dark/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-
 @endsection
 
-@section('kontendaftarkain')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
@@ -41,12 +36,6 @@
             <span class="btn-text-inner">Tambah Data</span>
         </button>
     </a>
-    {{-- <a href="{{ route('kain.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
-        </button>
-    </a> --}}
 </div>
 
 <div class="row layout-spacing">
@@ -59,27 +48,25 @@
                             <th>Kode</th>
                             <th>Jenis Kain</th>
                             <th>Warna</th>
-                            <th class="text-center">Lokasi Rak</th>
+                            <th class="text-center">Rak</th>
                             <th class="text-center">Status</th>
-                            <th>Stok</th>
-                            <th>Stok Mendatang</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th>Stok (Meter)</th>
+                            <th class="text-center dt-no-sorting" style="width: 5%;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datakain)
+                        @foreach ($kains as $kain)
                         <tr>
-                            {{-- <input type="hidden" class="delete_id" value="{{ $datakain->id }}"> --}}
-                            <td><a href="{{ route('kain.show', $datakain->id) }}">{{
-                                    $datakain->kode_kain }}</a></td>
-                            <td><a href="{{ route('kain.show', $datakain->id) }}">{{
-                                    $datakain->jenis_kain }}</a></td>
-                            <td>{{ $datakain->warna }}</td>
-                            <td class="text-center">{{ $datakain->lokasi }}</td>
+                            <td><a href="{{ route('kain.show', $kain->id) }}">{{
+                                    $kain->kode_kain }}</a></td>
+                            <td><a href="{{ route('kain.show', $kain->id) }}">{{
+                                    $kain->nama }}</a></td>
+                            <td>{{ $kain->warna }}</td>
+                            <td class="text-center">{{ $kain->raks->lokasi }}</td>
 
-                            @if ($datakain->stok < 1) <td class="text-center"><span
+                            @if ($kain->stok < 1) <td class="text-center"><span
                                     class="badge badge-light-danger">Habis</span></td>
-                                @elseif ($datakain->stok <= 100) <td class="text-center"><span
+                                @elseif ($kain->stok <= 100) <td class="text-center"><span
                                         class="badge badge-light-warning">Hampir
                                         Habis</span></td>
                                     @else
@@ -87,29 +74,24 @@
                                     </td>
                                     @endif
 
-                                    <td>{{ $datakain->stok }}</td>
-                                    <td>{{ $datakain->incoming_stok }}</td>
+                                    <td>{{ $kain->stok }}</td>
 
                                     <td class="text-center">
 
-                                        <form method="POST" action="{{ route('kain.destroy', $datakain->id) }}">
+                                        <form method="POST" action="{{ route('kain.destroy', $kain->id) }}">
                                             @csrf
                                             @method("DELETE")
 
                                             <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                                href="{{ route('kain.edit', $datakain->id) }}" data-bs-toggle="tooltip"
+                                                href="{{ route('kain.edit', $kain->id) }}" data-bs-toggle="tooltip"
                                                 data-bs-placement="top" title="Edit" data-original-title="Edit"><i
                                                     data-feather="edit-3"></i></a>
 
                                             <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                                href="{{ route('kain.destroy', $datakain->id) }}"
+                                                href="{{ route('kain.destroy', $kain->id) }}"
                                                 data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
                                                 data-confirm-delete="true" data-original-title="Delete" type="submit"><i
                                                     data-feather="trash"></i></a>
-
-                                            {{-- <a href="{{ route('kain.destroy', $datakain->id) }}"
-                                                class="btn btn-danger" data-confirm-delete="true"
-                                                type="submit">Delete</a> --}}
                                         </form>
                                     </td>
                             </tr>
@@ -122,12 +104,10 @@
 </div>
 @endsection
 
-@section('jsdaftarkain')
+@section('js')
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>
-{{-- <script src="{{ asset('assets/src/assets/js/scrollspyNav.js') }}"></script> --}}
-{{-- <script src="{{ asset('assets/src/plugins/src/highlight/highlight.pack.js') }}"></script> --}}
 
 <script>
     c3 = $('#style-3').DataTable({
@@ -147,77 +127,11 @@
             "stripeClasses": [],
             "lengthMenu": [5, 10, 20, 50],
             "pageLength": 10,
+            "aaSorting": [[0,'desc']],
         });
 
         multiCheck(c3);
         
 </script>
 
-{{-- <script>
-    document.querySelector('#{{ $datakain->id }}').addEventListener('click', function() {
-    Swal.fire({
-    title: 'Are you sure deleting {{ $datakain->id }}?',
-    text: "You won't be able to revert this!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-    if (result.isConfirmed) {
-    Swal.fire(
-    'Deleted!',
-    'Your file has been deleted.',
-    'success'
-    )
-    }
-    })
-    })
-</script> --}}
-
-{{-- <script>
-    $(document).ready(function () {
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-
-    $('.btnDelete').click(function (e) {
-        e.preventDefault();
-
-        var deleted = $(this).closest("tr").find('.delete_id').val();
-
-        swal({
-            title: "Apakah anda yakin?",
-            text: "Setelah dihapus, data tidak dapat dipulihkan!",
-            icon: "warning",
-            buttons: true,
-            dangerMode: true
-        })
-        .then((willDelete) => {
-            if (willDelete) {
-                var data = {
-                    "_token": $('input[name=_token]').val(),
-                    "id": deleteid,
-                };
-                $.ajax({
-                    type: "DELETE",
-                    url: 'kain/' + deleteid,
-                    data: data,
-                    success: function (response) {
-                        swal(response.status, {
-                            icon: "success"
-                        })
-                        .then((result) => {
-                            location.reload();
-                        });
-                    }
-                });
-            }
-        });
-    });
-});
-</script> --}}
-<!-- END PAGE LEVEL SCRIPTS -->
 @endsection

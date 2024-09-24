@@ -2,22 +2,7 @@
 
 @section('title', 'Tambah Data Produksi')
 
-@section('cssinsertproduksi')
-<link rel="stylesheet" href="{{ asset('assets/src/plugins/src/filepond/filepond.min.css') }}">
-<link rel="stylesheet" href="{{ asset('assets/src/plugins/src/filepond/FilePondPluginImagePreview.min.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/tagify/tagify.css') }}">
-
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/assets/css/light/forms/switches.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/light/editors/quill/quill.snow.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/light/tagify/custom-tagify.css') }}">
-<link href="{{ asset('assets/src/plugins/css/light/filepond/custom-filepond.css" rel="stylesheet"
-    type="text/css') }}" />
-
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/assets/css/dark/forms/switches.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/editors/quill/quill.snow.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/tagify/custom-tagify.css') }}">
-<link href="{{ asset('assets/src/plugins/css/dark/filepond/custom-filepond.css" rel="stylesheet" type="text/css') }}" />
-
+@section('css')
 <link rel="stylesheet" href="{{ asset('assets/src/assets/css/light/apps/ecommerce-create.css') }}">
 <link rel="stylesheet" href="{{ asset('assets/src/assets/css/dark/apps/ecommerce-create.css') }}">
 
@@ -29,12 +14,24 @@
 <link href="{{ asset('assets/src/assets/css/dark/apps/invoice-add.css') }}" rel="stylesheet" type="text/css" />
 <link href="{{ asset('assets/src/assets/css/light/apps/invoice-add.css') }}" rel="stylesheet" type="text/css" />
 
-{{--
-<link rel="stylesheet" href="{{ asset('assets/src/plugins/src/sweetalerts2/sweetalerts2.css') }}"> --}}
+<link href="{{ asset('assets/src/assets/css/light/components/list-group.css') }}" rel="stylesheet" type="text/css">
+<link href="{{ asset('assets/src/assets/css/light/users/user-profile.css') }}" rel="stylesheet" type="text/css" />
 
+<link href="{{ asset('assets/src/assets/css/dark/components/list-group.css') }}" rel="stylesheet" type="text/css">
+<link href="{{ asset('assets/src/assets/css/dark/users/user-profile.css') }}" rel="stylesheet" type="text/css" />
+
+<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/stepper/bsStepper.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/light/stepper/custom-bsStepper.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/stepper/custom-bsStepper.css') }}">
+
+<link rel="stylesheet" type="text/css"
+    href="{{ asset('assets/src/plugins/src/tomSelect/tom-select.default.min.css') }}">
+<link rel="stylesheet" type="text/css"
+    href="{{ asset('assets/src/plugins/css/light/tomSelect/custom-tomSelect.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/css/dark/tomSelect/custom-tomSelect.css') }}">
 @endsection
 
-@section('konteninsertproduksi')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
@@ -47,461 +44,591 @@
     </nav>
 </div>
 
-<div class="row mb-4 layout-spacing">
-    <form enctype="multipart/form-data" class="row g-3" method="POST" action="{{ route('produksi.store') }}">
-        @csrf
-        <div class="widget-content widget-content-area ecommerce-create-section">
-            <div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-4">
-                            <label class="col-sm-12 col-form-label col-form-label-sm">Kode Produksi</label>
-                            <input type="text" value="{{ old('id') }}" id="input-kode-produksi"
-                                class="form-control @error('id') is-invalid @enderror" name="id"
-                                placeholder="Kode Produksi" autofocus required>
-                            @error('id')
-                            <div class="invalid-feedback">
-                                {{ $message }}
+
+
+<div class="row layout-top-spacing" id="cancel-row">
+    <div id="wizard_Default" class="col-lg-12 layout-spacing">
+        <div class="statbox widget box box-shadow">
+            <div class="widget-content widget-content-area">
+                <div class="bs-stepper stepper-form-one">
+                    <div class="bs-stepper-header" role="tablist">
+                        {{-- <div class="step" data-target="#defaultStep-one">
+                            <button type="button" class="step-trigger" role="tab">
+                                <span class="bs-stepper-circle">1</span>
+                                <span class="bs-stepper-label">Target Produk</span>
+                            </button>
+                        </div>
+                        <div class="line"></div> --}}
+                        <div class="step" data-target="#defaultStep-one">
+                            <button type="button" class="step-trigger" role="tab">
+                                <span class="bs-stepper-circle">1</span>
+                                <span class="bs-stepper-label">Target Qty</span>
+                            </button>
+                        </div>
+                        <div class="line"></div>
+                        <div class="step" data-target="#defaultStep-two">
+                            <button type="button" class="step-trigger" role="tab">
+                                <span class="bs-stepper-circle">2</span>
+                                <span class="bs-stepper-label">Informasi Produksi</span>
+                            </button>
+                        </div>
+                        <div class="line"></div>
+                        <div class="step" data-target="#defaultStep-three">
+                            <button type="button" class="step-trigger" role="tab">
+                                <span class="bs-stepper-circle">3</span>
+                                <span class="bs-stepper-label">Assign Potong Kain</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bs-stepper-content">
+                        <form method="POST" action="{{ route('produksi.store') }}">
+                            @csrf
+
+                            {{-- <div id="defaultStep-one" class="content" role="tabpanel">
+
+                                <div class="row mb-4">
+                                    <div class="col-4">
+                                        <label>Kode Produk <small
+                                                class="text-muted ms-2 pb-1">(Required)</small></label>
+                                        <div class="col-sm-12">
+                                            <select class="form-select" id="input-produk" name="produk_id"
+                                                oninput="namaUkuran()" autocomplete="off" required>
+                                                <option selected disabled value="">Choose...</option>
+                                                @foreach ($produks as $produk)
+                                                <option value="{{ $produk->id }}" {{ old('produk_id')==$produk->
+                                                    id ?
+                                                    'selected' : '' }}>{{ $produk->kode_produk }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <label>Nama Produk</label>
+                                        <div class="col-sm-12">
+                                            <input type="text" value="{{ old('nama_produk') }}" class="form-control"
+                                                name="nama_produk" id="input-nama-produk" readonly>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <div class="button-action mt-5 text-end">
+                                    <button type="button" id="btn-nxt1" class="btn btn-secondary btn-nxt">Next</button>
+                                </div>
+
+                            </div> --}}
+
+                            <div id="defaultStep-one" class="content" role="tabpanel">
+                                <div class="row mb-4">
+                                    <div class="col">
+                                        <label>Kode Produk - Nama Produk<small class="text-muted ms-2 pb-1">(Required)</small></label>
+                                        <div class="col-sm-12">
+                                            <select class="form-select" id="input-produk" name="produk_id" oninput="informasiTarget()" autocomplete="off"
+                                                required>
+                                                <option selected disabled value="">Choose...</option>
+                                                @foreach ($produks as $produk)
+                                                <option value="{{ $produk->id }}" {{ old('produk_id')==$produk->
+                                                    id ?
+                                                    'selected' : '' }}>{{ $produk->kode_produk }} - {{ $produk->nama }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="area-target">
+                                </div>
+
+                                <div class="button-action mt-5 text-end">
+                                    {{-- <button type="button" class="btn btn-secondary btn-prev me-3">Prev</button> --}}
+                                    <button type="button" id="btn-nxt1" class="btn btn-secondary btn-nxt" disabled>Next</button>
+                                </div>
+
                             </div>
-                            @enderror
-                        </div>
 
-                    </div>
+                            <div id="defaultStep-two" class="content" role="tabpanel">
 
-                    <div class="col-md-3">
-                        <div class="form-group mb-4">
-                            <label class="col-sm-12 col-form-label col-form-label-sm">Tanggal Mulai</label>
-                            <input
-                                class="form-control flatpickr flatpickr-input active @error('tanggal_mulai') is-invalid @enderror"
-                                id="tanggal_mulai" name="tanggal_mulai" type="text" value="{{ old('tanggal_mulai') }}"
-                                placeholder="Tanggal Mulai" required>
-                            @error('tanggal_mulai')
-                            <div class="invalid-feedback">
-                                {{ $message }}
+                                <div class="summary layout-spacing ">
+                                    <div class="widget-content widget-content-area">
+                                        <div class="order-summary">
+                                            <div class="summary-list summary-kode">
+                                                <div class="summery-info">
+                                                    <div class="w-summary-details">
+                                                        <div class="w-summary-info">
+                                                            <h6>Kode Produksi<span class="summary-count"
+                                                                    id="kode-produksi"></span></h6>
+                                                                    <input type="hidden" name="kode-produksi" id="input-kode-produksi">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="summary-list summary-tgl-mulai">
+                                                <div class="summery-info">
+                                                    <div class="w-summary-details">
+                                                        <div class="w-summary-info">
+                                                            <h6>Tanggal Mulai<span class="summary-count"
+                                                                    id="tgl-mulai-produksi"></span></h6>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    {{-- List Ukuran --}}
+                                    <div class="col-lg-12">
+                                        <div class="summary layout-spacing ">
+                                            <div class="widget-content widget-content-area">
+                                                <div class="d-flex justify-content-between">
+                                                    <h6 id="kode-produk-target">Target Produk</h6>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table style-3 table-hover">
+                                                        <thead>
+                                                            <tr id="th-warna-produk">
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr id="td-ukuran-produk">
+                                                            </tr>
+                                                            <tr id="td-qty-produk">
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Komposisi Kain --}}
+                                    <div class="col-lg-12">
+                                        <div class="summary layout-spacing ">
+                                            <div class="widget-content widget-content-area">
+                                                <div class="d-flex justify-content-between">
+                                                    <h6 class="">Estimasi Penggunaan Kain Utama</h6>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table style-3 table-hover">
+                                                        <thead>
+                                                            <tr id="th-kode-kain">
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr id="td-qty-kain">
+                                                            </tr>
+                                                            <tr id="td-avg-kain">
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="d-flex justify-content-between" id="rata-rata">
+                                                    
+                                                </div>
+                                                <div class="d-flex justify-content-between" id="list-ukuran">
+                                                
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Keterangan --}}
+                                    <div class="col-12">
+                                        <div class="summary layout-spacing">
+                                            <div class="widget-content widget-content-area">
+                                                <div class="row mb-4">
+                                                    <div class="col-sm-12">
+                                                        <label>Keterangan Produksi</label>
+                                                        <textarea class="form-control" value="{{ old('keterangan') }}"
+                                                            rows="3" placeholder="Masukkan keterangan..."
+                                                            name="keterangan"></textarea>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="button-action mt-5 text-end">
+                                    <button type="button" class="btn btn-secondary btn-prev me-3">Prev</button>
+                                    <button type="button" id="btn-nxt2" class="btn btn-secondary btn-nxt">Next</button>
+                                </div>
                             </div>
-                            @enderror
-                        </div>
-                    </div>
 
-                    <div class="col-md-3">
-                        <div class="form-group mb-4">
-                            <label class="col-sm-12 col-form-label col-form-label-sm">Tanggal Selesai</label>
-                            <input class="form-control flatpickr flatpickr-input active" id="tanggal_selesai"
-                                name="tanggal_selesai" type="text" value="{{ old('tanggal_selesai') }}"
-                                placeholder="Tanggal Selesai">
-                        </div>
-                    </div>
+                            <div id="defaultStep-three" class="content" role="tabpanel">
 
-                </div>
-                <div class="row mb-4">
-                    <div class="col-sm-12">
-                        <label>Keterangan Produksi</label>
-                        <textarea class="form-control @error('keterangan-produksi') is-invalid @enderror"
-                            value="{{ old('keterangan-produksi') }}" id="input-keterangan-produksi" rows="4"
-                            placeholder="Keterangan Produksi" name="keterangan-produksi"></textarea>
-                        @error('keterangan-produksi')
-                        <div class="invalid-feedback">
-                            {{ $message }}
-                        </div>
-                        @enderror
-                    </div>
-
-                </div>
-            </div>
-
-            <div class="invoice-detail-items" style="padding-top: 10px">
-                <h5 class="">Target Produksi</h5>
-                <div class="table-responsive">
-                    <table class="table item-table target-produk">
-                        <thead>
-                            <tr>
-                                <th class=""></th>
-                                <th class="">Kode Produk</th>
-                                <th class="">Nama Produk</th>
-                                <th class="">Ukuran</th>
-                                <th class="">Qty Produk</th>
-                            </tr>
-                            <tr aria-hidden="true" class="mt-3 d-block table-row-hidden"></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="delete-item-row">
-                                    <ul class="table-controls">
-                                        <li><a href="javascript:void(0);" class="delete-item" data-toggle="tooltip"
-                                                data-placement="top" title="" data-original-title="Delete"><i
-                                                    data-feather="x-circle"></i></a></li>
-                                    </ul>
-                                </td>
-                                <td>
-                                    <select class="form-select"
-                                        id="input-kode-produk-0" name="dataTarget[0][id-produk]"
-                                        onchange="updateNamaProduk(0)" required>
-                                        <option selected disabled value="">Pilih Kode Produk...</option>
-                                        @foreach ($produks as $produk)
-                                            @if (old('dataTarget[0][id-produk]') == $produk->id)
-                                                <option value="{{ $produk->id }}" selected>{{ $produk->id }}</option>
-                                            @else
-                                                <option value="{{ $produk->id }}">{{ $produk->id }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                    {{-- @error('dataTarget[0][id-produk]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
+                                <div class="row mb-4">
+                                    <div class="col">
+                                        <label>Karyawan <small class="text-muted ms-2 pb-1">(Required)</small></label>
+                                        <div class="col-sm-12">
+                                            <select class="form-select" id="input-karyawan" name="karyawan_id"
+                                                autocomplete="off" required>
+                                                <option selected disabled value="">Choose...</option>
+                                                @foreach ($karyawans as $karyawan)
+                                                <option value="{{ $karyawan->id }}" {{ old('karyawan_id')==$karyawan->
+                                                    id ?
+                                                    'selected' : '' }}>{{ $karyawan->nama }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                     </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="450px">
-                                    <input type="text" value="{{ old('dataTarget[0][nama-produk]') }}"
-                                        id="input-nama-produk-0" class="form-control" name="dataTarget[0][nama-produk]"
-                                        placeholder="Nama Produk" readonly>
-                                </td>
-                                <td width="200px">
-                                    <select class="form-select"
-                                        id="input-ukuran-0" name="dataTarget[0][ukuran]" required>
-                                        <option selected disabled value="">Pilih Ukuran...</option>
-                                        @foreach ($ukurans as $ukuran)
-                                            @if (old('dataTarget[0][ukuran]') == $ukuran->id)
-                                                <option value="{{ $ukuran->id }}" selected>{{ $ukuran->ukuran }}</option>
-                                            @else
-                                                <option value="{{ $ukuran->id }}">{{ $ukuran->ukuran }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                    {{-- @error('dataTarget[0][ukuran]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="200px">
-                                    <input type="text" value="{{ old('dataTarget[0][qty-pakaian]') }}"
-                                        id="input-qty-pakaian-0"
-                                        class="form-control"
-                                        name="dataTarget[0][qty-pakaian]" placeholder="Qty Produk" required>
-                                    {{-- @error('dataTarget[0][qty-pakaian]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                </div>
 
-                    <input type="hidden" id="rowTargetProduk" name="rowTargetProduk">
-                </div>
-
-                <span class="btn btn-dark additemtarget">Add Item</span>
-
-            </div>
-
-            <div class="invoice-detail-items" style="padding-top: 50px">
-                <h5 class="">Nota Potong Kain</h5>
-                <div class="table-responsive">
-                    <table class="table item-table nota-kain">
-                        <thead>
-                            <tr>
-                                <th class=""></th>
-                                <th class="">Kode Potong Kain</th>
-                                <th class="">Kode Kain - Stok</th>
-                                <th class="">Qty Kain</th>
-                                <th class="">Tgl Mulai</th>
-                                <th class="">Tgl Selesai</th>
-                                <th class="">Karyawan</th>
-                            </tr>
-                            <tr aria-hidden="true" class="mt-3 d-block table-row-hidden"></tr>
-                        </thead>
-                        <tbody class="nota-kain-row">
-                            <tr>
-                                <td class="delete-item-row">
-                                    <ul class="table-controls">
-                                        <li><a href="javascript:void(0);" class="delete-item" data-toggle="tooltip"
-                                                data-placement="top" title="" data-original-title="Delete"><i
-                                                    data-feather="x-circle"></i></a></li>
-                                    </ul>
-                                </td>
-                                <td>
-                                    <input type="text" value="{{ old('dataNota[0][id-nota]') }}" id="input-id-nota-0"
-                                        class="form-control"
-                                        name="dataNota[0][id-nota]" placeholder="Kode Potong Kain" autofocus required>
-                                    {{-- @error('dataNota[0][id-nota]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="250px">
-                                    <select class="form-select"
-                                        id="input-id-kain-0" name="dataNota[0][id-kain]" required>
-                                        <option selected disabled value="">Choose...</option>
-                                        @foreach ($kains as $kain)
-                                            @if (old('dataNota[0][id-kain]') == $kain->id)
-                                                <option value="{{ $kain->id }}" selected>{{ $kain->id }} - {{ $kain->stok }}</option>
-                                            @else
-                                                <option value="{{ $kain->id }}">{{ $kain->id }} - {{ $kain->stok }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                    {{-- @error('dataNota[0][id-kain]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="150px">
-                                    <input type="text" value="{{ old('dataNota[0][qty-kain]') }}" id="input-qty-kain-0"
-                                        class="form-control"
-                                        name="dataNota[0][qty-kain]" placeholder="Qty Kain" required>
-                                    {{-- @error('dataNota[0][qty-kain]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="180px">
-                                    <input name="dataNota[0][tgl-mulai]" id="input-tgl-mulai-0"
-                                        class="form-control flatpickr flatpickr-input active"
-                                        type="text" placeholder="Pilih tanggal.."
-                                        value="{{ old('dataNota[0][tgl-mulai]') }}" required>
-                                    {{-- @error('dataNota[0][tgl-mulai]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td width="180px">
-                                    <input name="dataNota[0][tgl-selesai]" id="input-tgl-selesai-0"
-                                        class="form-control flatpickr flatpickr-input active @error('dataNota[0][tgl-selesai]') is-invalid @enderror"
-                                        type="text" placeholder="Pilih Tanggal.."
-                                        value="{{ old('dataNota[0][tgl-selesai]') }}">
-                                    {{-- @error('dataNota[0][tgl-selesai]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                                <td>
-                                    <select class="form-select"
-                                        id="input-karyawan-0" name="dataNota[0][karyawan]" required>
-                                        <option selected disabled value="">Pilih Karyawan...</option>
-                                        @foreach ($karyawans as $karyawan)
-                                            @if (old('dataNota[0][karyawan]') == $karyawan->id)
-                                                <option value="{{ $karyawan->id }}" selected>{{ $karyawan->nama }}</option>
-                                            @else
-                                                <option value="{{ $karyawan->id }}">{{ $karyawan->nama }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                    {{-- @error('dataNota[0][karyawan]')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                    @enderror --}}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <input type="hidden" id="rowNotaKain" name="rowNotaKain">
-                </div>
-
-                <span class="btn btn-dark additemnota">Add Item</span>
-            </div>
-
-            <div class="invoice-detail-note">
-                <div class="row">
-                    <div class="col-md-12 align-self-center">
-                        <div class="row mb-4">
-                            <div class="col-sm-12">
-                                <button class="btn btn-danger w-100">Reset</button>
+                                <div class="button-action mt-5 text-end">
+                                    <button type="button" class="btn btn-secondary btn-prev me-3">Prev</button>
+                                    <button type="submit" class="btn btn-success btn-submit">Submit</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row mb-4">
-                            <div class="col-sm-12">
-                                <button class="btn btn-success w-100 submit" type="submit"
-                                    onclick="sendValue()">Submit</button>
-                            </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
+
             </div>
         </div>
-    </form>
+    </div>
 </div>
 
 
 @endsection
 
-@section('jsinsertproduksi')
+@section('js')
 
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
-<script src="{{ asset('assets/src/plugins/src/flatpickr/flatpickr.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/forms/bootstrap_validation/bs_validation_script.js') }}"></script>
+<script src="{{ asset('assets/src/plugins/src/stepper/bsStepper.min.js') }}"></script>
+<script src="{{ asset('assets/src/plugins/src/stepper/custom-bsStepper.min.js') }}"></script>
+<script src="{{ asset('assets/src/plugins/src/tomSelect/tom-select.base.js') }}"></script>
+<script src="{{ asset('assets/src/plugins/src/tomSelect/custom-tom-select.js') }}"></script>
 
+{{-- Required Step 1 dan 3 --}}
 <script>
-    function deleteItemRow() {
-    deleteItem = document.querySelectorAll('.delete-item');
-    for (var i = 0; i < deleteItem.length; i++) {
-        deleteItem[i].addEventListener('click', function () {
-            this.parentElement.parentNode.parentNode.parentNode.remove();
-            })
+    
+    // Step 1
+    $(document).ready(function () {
+        function checkNonZeroValues() {
+            var nonZeroValue = false;
+            $('[id^="input-qty-"]').each(function () {
+                var value = $(this).val();
+                if (value > 0) {
+                    nonZeroValue = true;
+                    return false;
+                }
+            });
+            
+            if (nonZeroValue) {
+                $('#btn-nxt1').prop('disabled', false);
+            } else {
+                $('#btn-nxt1').prop('disabled', true);
+            }
         }
+
+        checkNonZeroValues();
+
+        $(document).on('input', '[id^="input-qty-"]', function () {
+            var value = $(this).val();
+
+            if (value < 0) {
+                $(this).val(Math.abs(value));
+            }
+            else{
+                $(this).val(Math.round(value));
+            }
+
+            checkNonZeroValues();
+        });
+
+        $(document).on('input', '[id^="input-produk"]', function () {
+            checkNonZeroValues();
+        });
+    });
+
+    // Step 3
+    $(document).ready(function () {
+        function checkRequiredFields() {
+            var allFieldsFilled = true;
+            $('#defaultStep-three [required]').each(function () {
+                if ($(this).val() === null || $(this).val() === '') 
+                {
+                    allFieldsFilled = false;
+                    return false;
+                }
+            });
+
+            if (allFieldsFilled) {
+                $('.btn-submit').prop('disabled', false);
+            } else {
+                $('.btn-submit').prop('disabled', true);
+            }
+        }
+
+        checkRequiredFields();
+
+        $('#defaultStep-three [required]').on('input change', function () {
+            checkRequiredFields();
+        });
+    });
+
+</script>
+
+{{-- Get Nama, Warna, Ukuran Produk --}}
+<script>
+    function informasiTarget() {
+        updateNamaProduk();
+        getWarnaProduk();
     }
 
-    var currentIndex = 0;
-    
-    document.getElementsByClassName('additemnota')[0].addEventListener('click', function () {
-    // console.log('cek add item nota')
+    function updateNamaProduk() {
+        
+        var selectedIdProduk = document.getElementById("input-produk").value;
+        var selectedKodeProduk = getKodeProduk(selectedIdProduk);
+        var idproduksi = getCountProduksi();
+        
 
-    currentIndex++;
-    
-    $html = '<tr>' +
-        '<td class="delete-item-row">'+
-            '<ul class="table-controls">'+
-                '<li><a href="javascript:void(0);" class="delete-item" data-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"stroke-linejoin="round" class="feather feather-x-circle"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg</a></li>'+
-            '</ul>'+
-        '</td>'+
-        '<td>'+
-            '<input type="text" value="{{ old("dataNota['+currentIndex+'][id-nota]") }}" class="form-control @error("dataNota['+currentIndex+'][id-nota]") is-invalid @enderror" name="dataNota['+currentIndex+'][id-nota]" id="input-id-nota-'+currentIndex+'" placeholder="Kode Potong Kain" autofocus required>'+
-            // '@error("dataNota['+currentIndex+'][id-nota]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-        '</td>'+
-        '<td width="250px">'+
-            '<select class="form-select @error("dataNota['+currentIndex+'][id-kain]") is-invalid @enderror" id="input-id-kain-'+currentIndex+'" name="dataNota['+currentIndex+'][id-kain]" required>'+
-                '<option selected disabled value="">Pilih Kode Kain...</option>'+
-                '@foreach ($kains as $kain)'+
-                '@if (old("dataNota['+currentIndex+'][id-kain]") == $kain->id)'+
-                '<option value="{{ $kain->id }}" selected>{{ $kain->id }} - {{ $kain->stok }}</option>'+
-                '@else'+
-                '<option value="{{ $kain->id }}">{{ $kain->id }} - {{ $kain->stok }}</option>'+
-                '@endif'+
-                '@endforeach'+
-            '</select>'+
-            // '@error("dataNota['+currentIndex+'][id-kain]") <div class="invalid-feedback"> {{ $message }} </div> @enderror'+
-        '</td>'+
-        '<td width="150px">'+
-            '<input type="text" value="{{ old("dataNota['+currentIndex+'][qty-kain]") }}" class="form-control @error("dataNota['+currentIndex+'][qty-kain]") is-invalid @enderror" id="input-qty-kain-'+currentIndex+'" name="dataNota['+currentIndex+'][qty-kain]" placeholder="Qty Kain" required>'+
-            // '@error("dataNota['+currentIndex+'][qty-kain]") <div class="invalid-feedback"> {{ $message }} </div> @enderror'+
-        '</td>'+
-        '<td width="180px">'+
-            '<input name="dataNota['+currentIndex+'][tgl-mulai]" id="input-tgl-mulai-'+currentIndex+'" class="form-control flatpickr flatpickr-input active @error("dataNota['+currentIndex+'][tgl-mulai]") is-invalid @enderror" type="text" placeholder="Pilih tanggal.." value="{{ old("dataNota['+currentIndex+'][tgl-mulai]") }}" required>'+
-            // '@error("dataNota['+currentIndex+'][tgl-mulai]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-        '</td>'+
-        '<td width="180px">'+
-            '<input name="dataNota['+currentIndex+'][tgl-selesai]" id="input-tgl-selesai-'+currentIndex+'"'+
-                'class="form-control flatpickr flatpickr-input active @error("dataNota['+currentIndex+'][tgl-selesai]") is-invalid @enderror" type="text" placeholder="Pilih Tanggal.." value="{{ old("dataNota['+currentIndex+'][tgl-selesai]") }}" required>'+
-            // '@error("dataNota['+currentIndex+'][tgl-selesai]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-        '</td>'+
-        '<td>'+
-            '<select class="form-select @error("dataNota['+currentIndex+'][karyawan]") is-invalid @enderror" id="input-karyawan-'+currentIndex+'" name="dataNota['+currentIndex+'][karyawan]" required>'+
-                '<option selected disabled value="">Pilih Karyawan...</option>'+
-                '@foreach ($karyawans as $karyawan)'+
-                '@if (old("dataNota['+currentIndex+'][karyawan]") == $karyawan->id)'+
-                '<option value="{{ $karyawan->id }}" selected>{{ $karyawan->nama }}</option>'+
-                '@else'+
-                '<option value="{{ $karyawan->id }}">{{ $karyawan->nama }}</option>'+
-                '@endif'+
-                '@endforeach'+
-            '</select>'+
-            // '@error("dataNota['+currentIndex+'][karyawan]") <div class="invalid-feedback">{{ $message }} </div> @enderror'+
-        '</td>'+
-        '</tr>';
-    
-        // console.log($html);
-    
-    $(".nota-kain tbody").append($html);
-    deleteItemRow();
-    
+        $("#kode-produksi").empty();
+        $("#kode-produk-target").empty();
+        $("#input-kode-produksi").val("");
 
+        var now = new Date();
+        var formattedDate = now.getFullYear();
+        var lastTwoDigits = formattedDate % 100;
 
-    var tglMulai = flatpickr(document.getElementById('input-tgl-mulai-' + currentIndex), {
-        dateFormat: "d-m-Y",
-    });
-    var tglSelesai = flatpickr(document.getElementById('input-tgl-selesai-' + currentIndex), {
-        dateFormat: "d-m-Y",
-    });
-    });
+        var kodeProduksi = lastTwoDigits + '/' + (idproduksi+1) + '/' + selectedKodeProduk;
 
-    var currentIndex2 = 0;
-
-    document.getElementsByClassName('additemtarget')[0].addEventListener('click', function () {
-    // console.log('dfdf')
-    
-    currentIndex2++;
-    
-    $html = '<tr>' +
-        '<td class="delete-item-row">' +
-            '<ul class="table-controls">' +
-                '<li><a href="javascript:void(0);" class="delete-item" data-toggle="tooltip" data-placement="top" title=""data-original-title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"stroke-linejoin="round" class="feather feather-x-circle"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></a></li></ul>' +
-            '</td>' +
-        '<td>' +
-            '<select class="form-select @error("dataTarget['+currentIndex2+'][id-produk]") is-invalid @enderror" id="input-kode-produk-'+currentIndex2+'" name="dataTarget['+currentIndex2+'][id-produk]" onchange="updateNamaProduk('+currentIndex2+')" required><option selected disabled value="">Pilih Kode Produk...</option> @foreach ($produks as $produk) @if(old("dataTarget['+currentIndex2+'][id-produk]") == $produk->id)<option value="{{ $produk->id }}" selected>{{ $produk-> id }}</option> @else<option value="{{ $produk->id }}">{{ $produk-> id }}</option> @endif @endforeach </select>' +
-            // '@error("dataTarget['+currentIndex2+'][id-produk]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-                '</td>' +
-        '<td width="450px">' +
-            '<input type="text" value="{{ old("dataTarget['+currentIndex2+'][nama-produk]") }}" id="input-nama-produk-'+currentIndex2+'" class="form-control" name="dataTarget['+currentIndex2+'][nama-produk]" placeholder="Nama Produk" readonly>' +
-            '</td>' +
-        '<td width="200px">' +
-            '<select class="form-select @error("dataTarget['+currentIndex2+'][ukuran]") is-invalid @enderror"' +
-                ' id="input-ukuran-'+currentIndex2+'" name="dataTarget['+currentIndex2+'][ukuran]" required>' +
-                '<option selected disabled value="">Pilih Ukuran...</option>' +
-                '@foreach ($ukurans as $ukuran)@if (old("dataTarget['+currentIndex2+'][ukuran]") == $ukuran->id)<option value="{{ $ukuran->id }}" selected>{{ $ukuran->ukuran }}</option> @else<option value="{{ $ukuran->id }}">{{ $ukuran->ukuran }}</option>@endif @endforeach' +
-                '</select>' +
-                // '@error("dataTarget['+currentIndex2+'][ukuran]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-            '</td>' +
-        '<td width="200px">' +
-            '<input type="text" value="{{ old("dataTarget['+currentIndex2+'][qty-pakaian]") }}" class="form-control @error("dataTarget['+currentIndex2+'][qty-pakaian]") is-invalid @enderror" id="input-qty-pakaian-'+currentIndex2+'" name="dataTarget['+currentIndex2+'][qty-pakaian]" placeholder="Qty Produk" required>' +
-            // '@error("dataTarget['+currentIndex2+'][qty-pakaian]") <div class="invalid-feedback">{{ $message }}</div> @enderror'+
-            '</td>' +
-        '</tr>';
-    
-    $(".target-produk tbody").append($html);
-    deleteItemRow();
-    
-    });
-
-</script>
-
-<script>
-    function sendValue() {
-    $('#rowNotaKain').val($('.nota-kain tbody tr').length);
-    $('#rowtargetProduk').val($('.target-produk tbody tr').length);
-};
-</script>
-
-<script>
-    var tglMulai = flatpickr(document.getElementById('input-tgl-mulai-0'), {
-    dateFormat: "d-m-Y",
-    // defaultDate: new Date()
-});
-var tglSelesai = flatpickr(document.getElementById('input-tgl-selesai-0'), {
-    dateFormat: "d-m-Y",
-    // defaultDate: new Date()
-});
-
-var tglMulaiProduksi = flatpickr(document.getElementById('tanggal_mulai'), {
-    dateFormat: "d-m-Y",
-    // defaultDate: new Date()
-    });
-    var tglSelesaiProduksi = flatpickr(document.getElementById('tanggal_selesai'), {
-    dateFormat: "d-m-Y",
-    // defaultDate: new Date()
-    });
-</script>
-
-<script>
-    function updateNamaProduk(idx) {
-        var selectedId = document.getElementById("input-kode-produk-" + idx).value;
-        var selectedNama = getNamaProduk(selectedId);
-        document.getElementById("input-nama-produk-" + idx).value = selectedNama;
+        $("#kode-produksi").text(kodeProduksi);
+        $("#input-kode-produksi").val(kodeProduksi);
+        $("#kode-produk-target").text('Target Produk ' + selectedKodeProduk);
     }
 
-    function getNamaProduk(id) {
+    function getKodeProduk(id) {
         var produks = @json($produks);
         var selectedProduk = produks.find(produk => produk.id == id);
-
-        return selectedProduk ? selectedProduk.nama : '';
+        
+        return selectedProduk ? selectedProduk.kode_produk : '';
     }
+
+    function getCountProduksi() {
+        var produksis = @json($produksis);
+        var count = produksis.length;
+        return count;
+    }
+
+    function getWarnaProduk() {
+        var selectedId = document.getElementById("input-produk").value;
+        $("#area-target").empty();
+        fetch('/getWarnaProduk/' + selectedId)
+            .then(response => response.json())
+            .then(data => {
+
+                data.forEach(item => {
+
+                    var html = '<div class="invoice-detail-items target-'+ item.id +'" style="padding-top: 10px">' +
+                        '<h5 id="warna-produk-'+ item.id +'">'+item.warna+'</h5>' +
+                        '<div class="table-responsive">' +
+                            '<table class="table item-table target-produk">' +
+                                '<thead>' +
+                                    '<tr>' +
+                                        '<th class="text-center" style="width:10%">Ukuran</th>' +
+                                        '<th class="">Qty (Pcs)</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody id="tbody-'+ item.id +'">' +
+                                '</tbody>' +
+                            '</table>' +
+                        '</div>' +
+                        '</div>';
+                    
+                    $("#area-target").append(html);
+
+                    getUkuranProduk(item.id);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function getUkuranProduk(id) {
+        fetch('/getUkuranProduk/' + id)
+            .then(response => response.json())
+            .then(data => {
+
+                data.forEach(item => {
+
+                    $html = '<tr>' +
+                            '<td class="text-center">'+
+                                '<h6>'+item.nama+'</h6>' +
+                            '</td>'+
+                            '<td>'+
+                                '<input type="number" min="0" id="input-qty-'+item.id+'" class="form-control">'+
+                            '</td>'+
+                        '</tr>';
+    
+                    $("#tbody-" + id).append($html);
+                });
+            })
+            .catch(error => console.error('Error:', error));          
+    }
+</script>
+
+{{-- Target produk dan Estimasi Kain --}}
+<script>
+    $("#btn-nxt1").on("click", function() {
+        var resultArray = [];
+
+        $("#th-warna-produk").empty();
+        $("#td-ukuran-produk").empty();
+        $("#td-qty-produk").empty();
+        $("#tgl-mulai-produksi").empty();
+
+        // TANGGAL PRODUKSI
+        var now = new Date();
+        var formattedDate = now.getDate() + '-' + (now.getMonth() + 1) + '-' + now.getFullYear();
+        var hours = now.getHours();
+        var minutes = now.getMinutes();
+        var seconds = now.getSeconds();
+        var formattedTime = (hours < 10 ? '0' : '' ) + hours + ':' + (minutes < 10 ? '0' : '' ) + minutes + ':' + (seconds < 10 ? '0' : '' ) + seconds; 
+        var timestamp=formattedDate + ' ' + formattedTime; 
+            
+        $("#tgl-mulai-produksi").text(timestamp);
+
+        // ===============================================
+        
+        $("#th-warna-produk").append('<th>Warna</th>');
+        $("#td-ukuran-produk").append('<td>Ukuran</td>');
+        $("#td-qty-produk").append('<td>Qty (Pcs)</td>');
+        
+        $('input[type="number"]').each(function(index) {
+            var id = $(this).attr('id');
+            var qty = $(this).val();
+
+            // console.log(id);
+
+            // var match = id.match(/(\d+)-(\d+)$/);
+            // Diatas kalo input-qty-1-1
+
+            var produk_ukuran_id = id.split('-').pop();
+
+            // console.log(produk_ukuran_id);
+
+            var produkukurans = getProdukUkuran(produk_ukuran_id);
+
+            // console.log(produkukurans);
+
+            if (qty != 0) {
+                var obj = {
+                    "produk_ukuran_id": produk_ukuran_id,
+                    "qty": qty
+                };
+
+                resultArray.push(obj);
+                
+                $("#th-warna-produk").append('<th class="text-center">'+produkukurans[0].warna+'</th>');
+                $("#td-ukuran-produk").append('<td class="text-center">'+produkukurans[0].nama+'</td>');
+                $("#td-qty-produk").append('<td class="text-center">'+qty+'</td>'+'<input type="hidden" name="dataTarget['+produk_ukuran_id+']" value="'+qty+'">');
+            }
+            
+        });
+
+        // Estimasi Kebutuhan
+
+        var arrEstimasiKain = [];
+
+        // console.log(resultArray);
+
+        $("#rata-rata").empty();
+        $("#list-ukuran").empty();
+
+        var cekM = 0;
+        var cekL = 0;
+        var cekXL = 0;
+        var cek2XL = 0;
+        var cek3XL = 0;
+        var cek4XL = 0;
+
+        resultArray.forEach(element => {
+
+            console.log(resultArray);
+            
+            var reseps = getResep(element.produk_ukuran_id);
+
+            $.ajax({
+                url: '/getAvgQty/' + element.produk_ukuran_id,
+                type: 'GET',
+                success: function(response) {
+
+                console.log(reseps);
+
+                reseps.forEach(data => {
+
+                    if (data.tipe === 'UTAMA') {
+
+                        var estimQty = element.qty * response.avgQty;
+                        estimQty = Number(estimQty.toFixed(2));
+
+                            arrEstimasiKain.push({"produk_ukuran_id": element.produk_ukuran_id, "id_kain": data.kain_id, "kode_kain": data.kode_kain, "estimQty":  estimQty, "avgQty": response.avgQty}); 
+                    }
+                });
+
+                displayEstimasi(arrEstimasiKain);
+
+                },
+                error: function(xhr, status, error) {
+                console.error('Error:', error);
+                }
+            });
+        });
+
+        function displayEstimasi(array) {
+            $("#th-kode-kain").empty();
+            $("#td-qty-kain").empty();
+            $("#td-avg-kain").empty();
+
+            $("#th-kode-kain").append('<th>Kode Kain</th>');
+            $("#td-qty-kain").append('<td>Qty (Meter)</td>');
+            $("#td-avg-kain").append('<td>Rata-rata (Meter)</td>');
+
+            array.forEach(data => {
+                $("#th-kode-kain").append('<th class="text-center"><b>'+data.kode_kain+'</b></th>');
+                $("#td-qty-kain").append('<td class="text-center">'+data.estimQty+'</td>'+'<input type="hidden" name="dataKain['+data.produk_ukuran_id+']['+data.id_kain+']" value="'+data.estimQty+'">');
+                $("#td-avg-kain").append('<td class="text-center">'+data.avgQty+'</td>');
+            });
+        }
+   
+    })
+
+    function getResep(id) {
+        var reseps = @json($reseps);
+        var selectedKain = reseps.filter(data => data.id == id);
+        
+        return selectedKain ? selectedKain : '';
+    }
+
+
+    function getProdukUkuran(id) {
+        var produkukuran = @json($produkukurans);
+        var selectedData = produkukuran.filter(data => data.id == id);
+        
+        return selectedData ? selectedData : '';
+    }
+</script>
+
+{{-- Tom Select --}}
+<script>
+    new TomSelect("#input-produk",{
+        create: true,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
+    new TomSelect("#input-karyawan",{
+        create: true,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    });
 </script>
 
 @endsection

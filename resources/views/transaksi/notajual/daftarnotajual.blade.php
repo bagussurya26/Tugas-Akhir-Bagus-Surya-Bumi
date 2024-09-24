@@ -2,25 +2,22 @@
 
 @section('title', 'Penjualan')
 
-@section('cssdaftarnotajual')
-<!--  BEGIN CUSTOM STYLE FILE  -->
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/light/table/datatable/dt-global_style.css') }}">
-<link href="{{ asset('assets/src/assets/css/light/apps/invoice-list.css') }}" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/light/table/datatable/custom_dt_custom.css') }}">
-
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/dt-global_style.css') }}">
-<link href="{{ asset('assets/src/assets/css/dark/apps/invoice-list.css') }}" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/custom_dt_custom.css') }}">
-<!--  END CUSTOM STYLE FILE  -->
 @endsection
 
-@section('kontendaftarnotajual')
+@section('konten')
+@include('sweetalert::alert')
+
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
@@ -39,12 +36,6 @@
             <span class="btn-text-inner">Tambah Data</span>
         </button>
     </a>
-    {{-- <a href="{{ route('buyorder.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
-        </button>
-    </a> --}}
 </div>
 
 <div class="row layout-spacing">
@@ -55,38 +46,43 @@
                     <thead>
                         <tr>
                             <th>Kode</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th>Tanggal</th>
+                            <th>Total Pcs</th>
+                            <th class="text-end">Grand Total</th>
+                            {{-- <th class="text-center dt-no-sorting">Action</th> --}}
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $datanotajual)
+                        @foreach ($penjualans as $penjualan)
                         <tr>
-                            <td><a href="{{ route('notajual.show', $datanotajual->id) }}">{{ $datanotajual->kode_pakaian }}</span>
+                            <td><a href="{{ route('notajual.show', $penjualan->id) }}">{{ $penjualan->kode_nota
+                                    }}</a>
                             </td>
 
-                                <td class="text-center">
+                            <td><a href="{{ route('notajual.show', $penjualan->id) }}">{{ $penjualan->tgl_pesan
+                                    }}</a></td>
 
-                                    <form method="POST" action="{{ route('notajual.destroy', $datanotajual->id) }}">
-                                        @csrf
-                                        @method("DELETE")
+                            <td>{{ $penjualan->total_qty }}</td>
+                            <td class="text-end">@currency($penjualan->grand_total)</td>
 
-                                        {{-- @if ($datanotajual->status == 'Selesai') --}}
+                            {{-- <td class="text-center">
 
-                                        {{-- @else --}}
-                                        <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                            href="{{ route('notajual.edit', $datanotajual->id) }}"
-                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"
-                                            data-original-title="Edit"><i data-feather="edit-3"></i></a>
-                                        <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                            href="{{ route('notajual.destroy', $datanotajual->id) }}"
-                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
-                                            data-confirm-delete="fa" data-original-title="Delete" type="submit"><i
-                                                data-feather="trash"></i></a>
-                                        {{-- @endif --}}
+                                <form method="POST" action="{{ route('notajual.destroy', $penjualan->id) }}">
+                                    @csrf
+                                    @method("DELETE")
 
 
-                                    </form>
-                                </td>
+                                    <a class="btn btn-light-primary btn-icon bs-tooltip"
+                                        href="{{ route('notajual.edit', $penjualan->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Edit" data-original-title="Edit"><i
+                                            data-feather="edit-3"></i></a>
+                                    <a class="btn btn-light-danger btn-icon bs-tooltip"
+                                        href="{{ route('notajual.destroy', $penjualan->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Delete" data-confirm-delete="fa"
+                                        data-original-title="Delete" type="submit"><i data-feather="trash"></i></a>
+
+                                </form>
+                            </td> --}}
                         </tr>
                         @endforeach
                     </tbody>
@@ -97,14 +93,10 @@
 </div>
 @endsection
 
-@section('jsdaftarnotajual')
-<!-- BEGIN PAGE LEVEL SCRIPTS -->
+@section('js')
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>
-<script src="{{ asset('assets/src/plugins/src/table/datatable/button-ext/dataTables.buttons.min.js') }}"></script>
-<script src="{{ asset('assets/src/assets/js/apps/invoice-list.js') }}"></script>
-<!-- END PAGE LEVEL SCRIPTS -->
 
 <script>
     c3 = $('#style-3').DataTable({
@@ -123,7 +115,8 @@
             },
             "stripeClasses": [],
             "lengthMenu": [5, 10, 20, 50],
-            "pageLength": 10
+            "pageLength": 10,
+            "aaSorting": [[1,'desc']],
         });
 
         multiCheck(c3);

@@ -2,7 +2,7 @@
 
 @section('title', 'Daftar Karyawan')
 
-@section('cssdaftarkaryawan')
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
@@ -19,7 +19,7 @@
 
 @endsection
 
-@section('kontendaftarkaryawan')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
@@ -49,16 +49,16 @@
                 <table id="style-3" class="table style-3 table-hover">
                     <thead>
                         <tr>
-                            <th>No.</th>
+                            <th style="width: 7%;">Id</th>
                             <th>Nama</th>
                             <th>No. HP</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th class="text-center dt-no-sorting" style="width: 5%;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($queryModel as $index => $datakaryawan)
                         <tr>
-                            <td>{{ $index + 1}}</td>
+                            <td>{{ $datakaryawan->id}}</td>
                             <td>{{ $datakaryawan->nama}}</td>
                             <td>{{ $datakaryawan->no_hp}}</td>
 
@@ -89,7 +89,7 @@
 </div>
 @endsection
 
-@section('jsdaftarkaryawan')
+@section('js')
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>

@@ -2,7 +2,7 @@
 
 @section('title', 'Analytics')
 
-@section('cssanalytics')
+@section('css')
 <!-- BEGIN PAGE LEVEL PLUGINS/CUSTOM STYLES -->
 <link href="{{ asset('assets/src/plugins/src/apex/apexcharts.css') }}" rel="stylesheet" type="text/css">
 <link href="{{ asset('assets/src/assets/css/light/dashboard/dash_1.css') }}" rel="stylesheet" type="text/css" />
@@ -10,7 +10,7 @@
 <!-- END PAGE LEVEL PLUGINS/CUSTOM STYLES -->
 @endsection
 
-@section('kontenanalytics')
+@section('konten')
 <div class="row layout-top-spacing">
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12 col-12 layout-spacing">
@@ -631,7 +631,7 @@
 </div>
 @endsection
 
-@section('jsanalytics')
+@section('js')
 <!-- BEGIN PAGE LEVEL PLUGINS/CUSTOM SCRIPTS -->
 <script src="{{ asset('assets/src/plugins/src/apex/apexcharts.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/dashboard/dash_1.js') }}"></script>

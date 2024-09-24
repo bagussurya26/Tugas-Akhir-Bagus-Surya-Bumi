@@ -1,5 +1,5 @@
-window.addEventListener("load", function(){
-
+window.addEventListener("load", function () {
+  
   try {
 
     getcorkThemeObject = localStorage.getItem("theme");
@@ -240,7 +240,7 @@ window.addEventListener("load", function(){
             name: 'Income',
             data: [16500, 17500, 16200, 17300, 16000, 21500, 16000, 17000, 16000, 19000, 18000, 19000]
         }],
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Aww'],
         xaxis: {
           axisBorder: {
             show: false
@@ -686,7 +686,7 @@ window.addEventListener("load", function(){
             name: 'Income',
             data: [16500, 17500, 16200, 17300, 16000, 21500, 16000, 17000, 16000, 19000, 18000, 19000]
         }],
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Aww'],
         xaxis: {
           axisBorder: {
             show: false

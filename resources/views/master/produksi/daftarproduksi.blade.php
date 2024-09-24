@@ -2,7 +2,7 @@
 
 @section('title', 'Daftar Produksi')
 
-@section('cssdaftarproduksi')
+@section('css')
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/src/plugins/src/table/datatable/datatables.css') }}">
 
 <link rel="stylesheet" type="text/css"
@@ -14,27 +14,18 @@
 <link rel="stylesheet" type="text/css"
     href="{{ asset('assets/src/plugins/css/dark/table/datatable/custom_dt_custom.css') }}">
 
-{{--
-<link rel="stylesheet" href="{{ asset('assets/src/plugins/src/sweetalerts2/sweetalerts2.css') }}"> --}}
+    
 
-<link href="{{ asset('assets/src/assets/css/light/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-<link href="{{ asset('assets/src/assets/css/dark/scrollspyNav.css') }}" rel="stylesheet" type="text/css" />
-
-{{--
-<link href="{{ asset('assets/src/plugins/css/light/sweetalerts2/custom-sweetalert.css') }}" rel="stylesheet"
-    type="text/css" />
-<link href="{{ asset('assets/src/plugins/css/dark/sweetalerts2/custom-sweetalert.css') }}" rel="stylesheet"
-    type="text/css" /> --}}
 @endsection
 
-@section('kontendaftarproduksi')
+@section('konten')
 @include('sweetalert::alert')
 
 <!-- BREADCRUMB -->
 <div class="page-meta">
     <nav class="breadcrumb-style-one" aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="#">Master</a></li>
+            <li class="breadcrumb-item"><a href="#">Produksi</a></li>
             <li class="breadcrumb-item active" aria-current="page">Daftar Produksi</li>
         </ol>
     </nav>
@@ -46,12 +37,6 @@
         <button class="btn btn-primary  mb-2 me-4">
             <i data-feather="plus"></i>
             <span class="btn-text-inner">Tambah Data</span>
-        </button>
-    </a>
-    <a href="{{ route('produksi.delete') }}">
-        <button class="btn btn-info  mb-2 me-4">
-            <i data-feather="info"></i>
-            <span class="btn-text-inner">Show Deleted Data</span>
         </button>
     </a>
 </div>
@@ -66,52 +51,63 @@
                             <th>Kode</th>
                             <th>Tanggal Mulai</th>
                             <th>Tanggal Selesai</th>
+                            <th>Karyawan</th>
                             <th class="text-center">Status</th>
-                            <th class="text-center dt-no-sorting">Action</th>
+                            <th class="text-center dt-no-sorting" style="width: 5%;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($queryModel as $dataproduksi)
+                        @foreach ($produksis as $produksi)
                         <tr>
-                            <td><a href="{{ route('produksi.show', $dataproduksi->id) }}">{{
-                                    $dataproduksi->id }}</a></td>
-                            <td>{{ date('d-m-Y',
-                                strtotime($dataproduksi->tgl_mulai)) }}</td>
+                            <td><a href="{{ route('produksi.show', $produksi->id) }}">{{
+                                    $produksi->kode_produksi }}</a></td>
+                            <td>{{ $produksi->tgl_mulai }}</td>
 
-                            @if ($dataproduksi->tgl_selesai == null)
+                            @if ($produksi->tgl_selesai == null)
                             <td>Belum Selesai</td>
                             @else
-                            <td>{{ date('d-m-Y',strtotime($dataproduksi->tgl_selesai)) }}</td>
+                            <td>{{ $produksi->tgl_selesai }}</td>
                             @endif
 
+                            <td>{{ $produksi->karyawans->nama }}</td>
 
-                            @if ($dataproduksi->status == 'Dalam Proses') <td class="text-center"><span
-                                    class="badge badge-light-warning">{{ $dataproduksi->status }}</span></td>
+                            @if ($produksi->status == 'Dalam Proses') <td class="text-center"><span
+                                    class="badge badge-light-warning">{{ $produksi->status }}</span></td>
                             @else
-                            <td class="text-center"><span class="badge badge-light-success">{{ $dataproduksi->status
+                            <td class="text-center"><span class="badge badge-light-success">{{ $produksi->status
                                     }}</span>
                             </td>
                             @endif
 
                             <td class="text-center">
 
-                                <form method="POST" action="{{ route('produksi.destroy', $dataproduksi->id) }}">
+                                <form method="POST" action="{{ route('produksi.destroy', $produksi->id) }}">
                                     @csrf
                                     @method("DELETE")
 
-                                    @if ($dataproduksi->status == 'Dalam Proses')
+                                    @if ($produksi->status != 'Selesai')
+                                    <a class="btn btn-light-danger btn-icon bs-tooltip"
+                                        href="{{ route('produksi.destroy', $produksi->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Delete" data-confirm-delete="true"
+                                        data-original-title="Delete" type="submit"><i data-feather="trash"></i></a>
+                                    @endif
+
+
+                                    {{-- @if ($produksi->nota_kains->status != 'Selesai')
                                     <a class="btn btn-light-primary btn-icon bs-tooltip"
-                                        href="{{ route('produksi.edit', $dataproduksi->id) }}" data-bs-toggle="tooltip"
+                                        href="{{ route('produksi.edit', $produksi->id) }}" data-bs-toggle="tooltip"
                                         data-bs-placement="top" title="Edit" data-original-title="Edit"><i
                                             data-feather="edit-3"></i></a>
                                     <a class="btn btn-light-danger btn-icon bs-tooltip"
-                                        href="{{ route('produksi.destroy', $dataproduksi->id) }}"
-                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"
-                                        data-confirm-delete="fa" data-original-title="Delete" type="submit"><i
-                                            data-feather="trash"></i></a>
+                                        href="{{ route('produksi.destroy', $produksi->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Delete" data-confirm-delete="true"
+                                        data-original-title="Delete" type="submit"><i data-feather="trash"></i></a>
                                     @else
-
-                                    @endif
+                                    <a class="btn btn-light-primary btn-icon bs-tooltip"
+                                        href="{{ route('produksi.edit', $produksi->id) }}" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Edit" data-original-title="Edit"><i
+                                            data-feather="edit-3"></i></a>
+                                    @endif --}}
 
 
                                 </form>
@@ -126,15 +122,11 @@
 </div>
 @endsection
 
-@section('jsdaftarproduksi')
+@section('js')
 <!-- BEGIN PAGE LEVEL SCRIPTS -->
 <script src="{{ asset('assets/src/plugins/src/global/vendors.min.js') }}"></script>
 <script src="{{ asset('assets/src/assets/js/custom.js') }}"></script>
 <script src="{{ asset('assets/src/plugins/src/table/datatable/datatables.js') }}"></script>
-{{-- <script src="{{ asset('assets/src/plugins/src/sweetalerts2/sweetalerts2.min.js') }}"></script> --}}
-{{-- <script src="{{ asset('assets/src/plugins/src/sweetalerts2/custom-sweetalert.js') }}"></script> --}}
-{{-- <script src="{{ asset('assets/src/assets/js/scrollspyNav.js') }}"></script> --}}
-{{-- <script src="{{ asset('assets/src/plugins/src/highlight/highlight.pack.js') }}"></script> --}}
 
 <script>
     c3 = $('#style-3').DataTable({
@@ -154,6 +146,7 @@
             "stripeClasses": [],
             "lengthMenu": [5, 10, 20, 50],
             "pageLength": 10,
+            "aaSorting": [[0,'desc']],
         });
 
         multiCheck(c3);
