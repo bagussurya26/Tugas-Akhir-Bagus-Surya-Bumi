@@ -336,31 +336,6 @@
 
                 <ul class="list-unstyled menu-categories" id="accordionExample">
 
-                    {{-- <li class="menu {{ request()->routeIs(['dashboard.*','home']) ? 'active' : '' }}">
-                        <a href="#dashboard" data-bs-toggle="collapse"
-                            aria-expanded="{{ request()->routeIs(['dashboard.*','home']) ? 'true' : 'false' }}"
-                            class="dropdown-toggle">
-                            <div class="">
-                                <i data-feather="home"></i>
-                                <span>Dashboard</span>
-                            </div>
-                            <div>
-                                <i data-feather="chevron-right"></i>
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </div>
-                        </a>
-                        <ul class="collapse submenu list-unstyled {{ request()->routeIs(['dashboard.*', 'home']) ? 'show' : '' }}"
-                            id="dashboard" data-bs-parent="#accordionExample">
-                            <li class="{{ request()->routeIs(['dashboard.analytics*', 'home']) ? 'active' : '' }}">
-                                <a href="{{ route('dashboard.analytics') }}"> Analytics </a>
-                            </li>
-                            <li class="{{ request()->routeIs('dashboard.sales*') ? 'active' : '' }}">
-                                <a href="{{ route('dashboard.sales') }}"> Sales </a>
-                            </li>
-                        </ul>
-                    </li> --}}
-
                     <li class="menu {{ request()->routeIs(['dashboard']) ? 'active' : '' }}">
                         <a href="{{ route('dashboard') }}" aria-expanded="false" class="dropdown-toggle">
                             <div class="">
